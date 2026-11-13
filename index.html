@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipe Costing</title>
+<style>
+  :root{
+    --bg: #16221b;
+    --bg-soft: #1d2e24;
+    --rail: #121c16;
+    --paper: #f4eedd;
+    --paper-soft: #ece4cd;
+    --ink: #241d14;
+    --ink-muted: #766c58;
+    --line: #d8cba8;
+    --saffron: #d99a2b;
+    --paprika: #b23a2e;
+    --good: #4c7a4f;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .app{
+    display:grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ---------- Rail ---------- */
+  .rail{
+    background: var(--rail);
+    padding: 28px 16px;
+    display:flex;
+    flex-direction:column;
+    gap: 14px;
+    max-height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+  .rail-title{
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    color: var(--paper);
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    margin: 0 4px;
+  }
+  .rail-sub{
+    color: #7a8a7e;
+    font-size: 0.72rem;
+    margin: -16px 4px 0;
+  }
+  .view-switch{
+    display:flex;
+    flex-direction:column;
+    gap: 2px;
+    margin: 0 4px;
+    background: var(--bg-soft);
+    border-radius: 3px;
+    padding: 3px;
+  }
+  .view-btn{
+    all: unset;
+    cursor: pointer;
+    color: #9baa96;
+    font-size: 0.78rem;
+    padding: 8px 10px;
+    border-radius: 2px;
+    text-align: left;
+  }
+  .view-btn:hover{ color: var(--paper); }
+  .view-btn.active{
+    background: var(--rail);
+    color: var(--saffron);
+  }
+    background: var(--bg-soft);
+    border: 1px solid #2a3a30;
+    color: var(--paper);
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    border-radius: 3px;
+    margin: 0 4px;
+  }
+  .rail-search::placeholder{ color: #62735f; }
+  .rail-search:focus{ outline: none; border-color: var(--saffron); }
+  .recipe-list{
+    display:flex;
+    flex-direction:column;
+    gap: 4px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .recipe-count{
+    color: #62735f;
+    font-size: 0.68rem;
+    margin: -8px 4px 0;
+  }
+  .recipe-tab{
+    all: unset;
+    cursor: pointer;
+    color: #cfd8ce;
+    padding: 10px 12px;
+    border-radius: 3px;
+    font-size: 0.88rem;
+    border-left: 3px solid transparent;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap: 8px;
+  }
+  .recipe-tab:hover{ background: rgba(255,255,255,0.05); }
+  .recipe-tab.active{
+    background: var(--bg-soft);
+    border-left-color: var(--saffron);
+    color: var(--paper);
+  }
+  .recipe-tab .rm{
+    all:unset;
+    cursor:pointer;
+    color:#5a6a5e;
+    font-size: 0.78rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+  .recipe-tab .rm:hover{ color: var(--paprika); background: rgba(178,58,46,0.12); }
+  .add-recipe{
+    all:unset;
+    cursor:pointer;
+    color: var(--saffron);
+    font-size: 0.85rem;
+    padding: 10px 12px;
+    border: 1px dashed #3a4a3f;
+    border-radius: 3px;
+    text-align:center;
+  }
+  .add-recipe:hover{ border-color: var(--saffron); }
+
+  /* ---------- Main ---------- */
+  main{
+    padding: 40px 48px 80px;
+    max-width: 980px;
+  }
+  .head-row{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .recipe-name{
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: 2.1rem;
+    color: var(--paper);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
+    padding: 2px 0;
+    min-width: 200px;
+    flex: 1;
+  }
+  .recipe-name:focus{ outline:none; border-bottom-color: var(--saffron); }
+  .portions-wrap{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    color: #a9b4a3;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .portions-wrap input{
+    width: 56px;
+    background: var(--bg-soft);
+    border: 1px solid #33453a;
+    color: var(--paper);
+    padding: 6px 8px;
+    border-radius: 3px;
+    font-size: 0.9rem;
+    text-align:center;
+  }
+
+  .card{
+    background: var(--paper);
+    border-radius: 4px;
+    padding: 24px 26px;
+    margin-top: 22px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+  }
+
+  table{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+  thead th{
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    color: var(--ink-muted);
+    border-bottom: 1px solid var(--line);
+    padding: 0 8px 10px;
+  }
+  th.num, td.num{ text-align: right; }
+  tbody td{
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--paper-soft);
+    vertical-align: middle;
+  }
+  tbody tr:hover{ background: rgba(217,154,43,0.06); }
+  td input{
+    width: 100%;
+    background: transparent;
+    border: none;
+    font-size: 0.92rem;
+    color: var(--ink);
+    padding: 3px 2px;
+    font-family: inherit;
+  }
+  td input:focus{ outline: none; background: #fff; box-shadow: 0 0 0 1px var(--line) inset; }
+  td.num input, td.unit input{ text-align: right; font-variant-numeric: tabular-nums; }
+  td.unit input{ text-align: left; }
+  .qty-col{ width: 80px; }
+  .unit-col{ width: 70px; }
+  .cost-col{ width: 110px; }
+  .line-col{ width: 100px; }
+  .rm-col{ width: 30px; }
+  .row-remove{
+    all:unset;
+    cursor:pointer;
+    color: #b8ab86;
+    font-size: 0.95rem;
+    padding: 4px 6px;
+  }
+  .row-remove:hover{ color: var(--paprika); }
+  .line-cost{
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  tfoot td{
+    padding-top: 12px;
+    border: none;
+    font-weight: 600;
+  }
+  .add-row-btn{
+    all:unset;
+    cursor:pointer;
+    color: var(--paprika);
+    font-size: 0.85rem;
+    margin-top: 12px;
+    display:inline-block;
+  }
+  .add-row-btn:hover{ text-decoration: underline; }
+
+  .card-title{
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+
+  /* Method */
+  .method-list{
+    list-style: none;
+    counter-reset: step;
+    margin: 0;
+    padding: 0;
+    display:flex;
+    flex-direction:column;
+    gap: 8px;
+  }
+  .method-list li{
+    counter-increment: step;
+    display:flex;
+    gap: 12px;
+    align-items:flex-start;
+  }
+  .method-list li::before{
+    content: counter(step);
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--saffron);
+    color: #241d14;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-top: 1px;
+  }
+  .method-list textarea{
+    flex: 1;
+    background: transparent;
+    border: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: var(--ink);
+    padding: 2px 2px;
+    overflow: hidden;
+  }
+  .method-list textarea:focus{ outline: none; box-shadow: 0 0 0 1px var(--line) inset; background:#fff; }
+  .method-remove{
+    all:unset;
+    cursor:pointer;
+    color: #b8ab86;
+    font-size: 0.9rem;
+    padding: 2px 4px;
+  }
+  .method-remove:hover{ color: var(--paprika); }
+
+  /* Summary */
+  .summary{
+    background: var(--bg-soft);
+    border: 1px solid #2a3a30;
+    border-radius: 4px;
+    padding: 22px 24px;
+    margin-top: 22px;
+  }
+  .summary-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 18px 26px;
+  }
+  .stat-label{
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    color: #8fa090;
+    margin-bottom: 4px;
+  }
+  .stat-value{
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.35rem;
+    color: var(--paper);
+  }
+  .stat-value.accent{ color: var(--saffron); }
+  .sell-input{
+    background: var(--bg);
+    border: 1px solid #3a4a3f;
+    color: var(--paper);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.35rem;
+    padding: 4px 6px;
+    border-radius: 3px;
+    width: 100px;
+  }
+  .bar-wrap{
+    margin-top: 20px;
+  }
+  .bar{
+    height: 10px;
+    border-radius: 6px;
+    background: #2a3a30;
+    overflow: hidden;
+    display:flex;
+  }
+  .bar-cost{ background: var(--paprika); height:100%; }
+  .bar-profit{ background: var(--good); height:100%; }
+  .bar-legend{
+    display:flex;
+    justify-content:space-between;
+    font-size: 0.7rem;
+    color: #8fa090;
+    margin-top: 6px;
+  }
+
+  footer.hint{
+    color: #56624f;
+    font-size: 0.72rem;
+    margin-top: 30px;
+  }
+
+  /* ---------- Pizza cards ---------- */
+  .pizza-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .pizza-card{
+    background: var(--paper);
+    border-radius: 4px;
+    padding: 20px 22px 18px;
+    border-top: 3px solid var(--saffron);
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
+  }
+  .pizza-card h3{
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: 1.2rem;
+    margin: 0;
+    color: var(--ink);
+    line-height: 1.25;
+  }
+  .pizza-price-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+  }
+  .pizza-price{
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.3rem;
+    color: var(--paprika);
+  }
+  .pizza-meta{
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+  }
+  .pizza-ingredients{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.82rem;
+    color: var(--ink);
+    display:flex;
+    flex-direction:column;
+    gap: 3px;
+  }
+  .pizza-ingredients li{
+    display:flex;
+    justify-content:space-between;
+    gap: 10px;
+  }
+  .pizza-ingredients li span:first-child{
+    color: var(--ink);
+  }
+  .pizza-ingredients li span:last-child{
+    color: var(--ink-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .pizza-cost-line{
+    display:flex;
+    justify-content:space-between;
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    padding-top: 8px;
+    border-top: 1px solid var(--paper-soft);
+  }
+
+  @media (max-width: 720px){
+    .app{ grid-template-columns: 1fr; }
+    .rail{ flex-direction: row; overflow-x:auto; padding: 16px; }
+    .recipe-list{ flex-direction: row; }
+    main{ padding: 28px 18px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <div>
+      <div class="rail-title">Recipe Costing</div>
+      <div class="rail-sub">98 recipes</div>
+    </div>
+    <div class="view-switch">
+      <button class="view-btn active" id="viewRecipesBtn">Kitchen recipes</button>
+      <button class="view-btn" id="viewPizzaBtn">Pizza cards</button>
+    </div>
+    <input class="rail-search" id="railSearch" type="text" placeholder="Search recipes\u2026" autocomplete="off">
+    <div class="recipe-count" id="recipeCount"></div>
+    <div class="recipe-list" id="recipeList"></div>
+    <button class="add-recipe" id="addRecipe">+ New recipe</button>
+  </nav>
+
+  <main>
+    <div id="recipeView">
+    <div class="head-row">
+      <input class="recipe-name" id="recipeName" spellcheck="false">
+      <div class="portions-wrap">
+        Portions / yield
+        <input type="number" id="portions" min="1" step="1">
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-title">INGREDIENTS</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th class="qty-col num">Qty</th>
+            <th class="unit-col">Unit</th>
+            <th class="cost-col num">Unit cost (R)</th>
+            <th class="line-col num">Line cost (R)</th>
+            <th class="rm-col"></th>
+          </tr>
+        </thead>
+        <tbody id="ingredientBody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4">Total recipe cost</td>
+            <td class="num line-cost" id="totalCost">R 0.00</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <button class="add-row-btn" id="addIngredient">+ Add ingredient</button>
+    </div>
+
+    <div class="card">
+      <p class="card-title">METHOD</p>
+      <ol class="method-list" id="methodList"></ol>
+      <button class="add-row-btn" id="addStep">+ Add step</button>
+    </div>
+
+    <div class="summary">
+      <p class="card-title" style="color:#8fa090;">COST &amp; PRICING</p>
+      <div class="summary-grid">
+        <div>
+          <div class="stat-label">Cost per portion</div>
+          <div class="stat-value accent" id="costPerPortion">R 0.00</div>
+        </div>
+        <div>
+          <div class="stat-label">Selling price / portion</div>
+          <input class="sell-input" id="sellPrice" type="number" step="0.01" min="0">
+        </div>
+        <div>
+          <div class="stat-label">Gross profit %</div>
+          <div class="stat-value" id="gpPercent">0%</div>
+        </div>
+        <div>
+          <div class="stat-label">Markup % (on cost)</div>
+          <div class="stat-value" id="markupPercent">0%</div>
+        </div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar">
+          <div class="bar-cost" id="barCost" style="width:50%"></div>
+          <div class="bar-profit" id="barProfit" style="width:50%"></div>
+        </div>
+        <div class="bar-legend">
+          <span>Cost of goods</span>
+          <span>Profit</span>
+        </div>
+      </div>
+    </div>
+
+    <footer class="hint">Edit any field &mdash; totals, cost per portion, GP% and markup recalculate automatically.</footer>
+    </div>
+
+    <div id="pizzaView" style="display:none;">
+      <div class="head-row">
+        <div class="recipe-name" style="cursor:default;">Luxury Pizza Recipe Cards</div>
+      </div>
+      <p style="color:#a9b4a3; font-size:0.85rem; margin: -8px 0 22px; max-width: 62ch;">
+        Eighteen signature pizzas, each priced at a 30% food-cost target. Figures are read-only reference cards \u2014 edit ingredient prices in the source workbook and re-upload to update.
+      </p>
+      <div class="pizza-grid" id="pizzaGrid"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+let uid = 1;
+const newId = () => uid++;
+
+const recipes = [
+  {
+    id: newId(),
+    name: "Jollof Rice",
+    portions: 10,
+    sellPrice: 60,
+    targetFoodCost: null,
+    ingredients: [{ name: "Long-grain parboiled rice", qty: 2.5, unit: "kg", cost: 18 }, { name: "Tomatoes", qty: 1.5, unit: "kg", cost: 20 }, { name: "Tomato paste", qty: 300, unit: "g", cost: 0.03 }, { name: "Red bell peppers", qty: 3, unit: "ea", cost: 6 }, { name: "Onions", qty: 2, unit: "ea", cost: 3.5 }, { name: "Scotch bonnet peppers", qty: 4, unit: "ea", cost: 2.5 }, { name: "Vegetable oil", qty: 250, unit: "ml", cost: 0.035 }, { name: "Curry powder", qty: 2, unit: "tbsp", cost: 3 }, { name: "Thyme", qty: 2, unit: "tbsp", cost: 3 }, { name: "Stock cubes", qty: 4, unit: "ea", cost: 2.5 }, { name: "Salt", qty: 1, unit: "to taste", cost: 2 }, { name: "Chicken stock", qty: 2, unit: "litres", cost: 15 }],
+    method: ["Blend tomatoes, peppers and onions.", "Fry tomato paste in oil for 5 minutes.", "Add blended mixture and cook until reduced.", "Add seasonings and stock.", "Add washed rice.", "Cover tightly and cook for 35-40 minutes.", "Stir and allow to steam before serving."],
+  },
+  {
+    id: newId(),
+    name: "Native Jollof Rice",
+    portions: 10,
+    sellPrice: 120,
+    targetFoodCost: null,
+    ingredients: [{ name: "Rice", qty: 2.5, unit: "kg", cost: 16 }, { name: "Palm oil", qty: 500, unit: "ml", cost: 0.055 }, { name: "Smoked fish", qty: 500, unit: "g", cost: 0.18 }, { name: "Dried prawns", qty: 300, unit: "g", cost: 0.32 }, { name: "Onions", qty: 2, unit: "ea", cost: 3.5 }, { name: "Scotch bonnet peppers", qty: 4, unit: "ea", cost: 2.5 }, { name: "Stock cubes", qty: 4, unit: "ea", cost: 2.5 }, { name: "Salt", qty: 1, unit: "to taste", cost: 2 }, { name: "Meat stock", qty: 2, unit: "litres", cost: 18 }],
+    method: ["Heat palm oil.", "Fry onions and pepper.", "Add smoked fish and prawns.", "Pour in stock and season.", "Add rice and cook until tender."],
+  },
+  {
+    id: newId(),
+    name: "Fried Rice",
+    portions: 10,
+    sellPrice: 60,
+    targetFoodCost: null,
+    ingredients: [{ name: "Rice", qty: 2.5, unit: "kg", cost: 16 }, { name: "Carrots", qty: 500, unit: "g", cost: 0.018 }, { name: "Green beans", qty: 500, unit: "g", cost: 0.045 }, { name: "Sweetcorn", qty: 500, unit: "g", cost: 0.04 }, { name: "Peas", qty: 300, unit: "g", cost: 0.055 }, { name: "Green pepper", qty: 1, unit: "ea", cost: 5 }, { name: "Oil", qty: 250, unit: "ml", cost: 0.035 }, { name: "Stock cubes", qty: 4, unit: "ea", cost: 2.5 }, { name: "Curry powder", qty: 1, unit: "to taste", cost: 3 }, { name: "Salt", qty: 1, unit: "to taste", cost: 2 }],
+    method: ["Parboil rice.", "Stir-fry vegetables.", "Add rice and seasonings.", "Fry until evenly mixed."],
+  },
+  {
+    id: newId(),
+    name: "Rice & Beans with Stew",
+    portions: 10,
+    sellPrice: 120,
+    targetFoodCost: null,
+    ingredients: [{ name: "Rice", qty: 1.5, unit: "kg", cost: 16 }, { name: "Beans", qty: 1, unit: "kg", cost: 32 }, { name: "Beef or chicken stew", qty: 2, unit: "litres", cost: 85 }],
+    method: ["Cook beans until soft.", "Cook rice separately.", "Mix and serve with stew."],
+  },
+  {
+    id: newId(),
+    name: "Moi Moi",
+    portions: 10,
+    sellPrice: 60,
+    targetFoodCost: null,
+    ingredients: [{ name: "Peeled beans", qty: 1, unit: "kg", cost: 45 }, { name: "Red peppers", qty: 2, unit: "ea", cost: 6 }, { name: "Onion", qty: 1, unit: "ea", cost: 3.5 }, { name: "Vegetable oil", qty: 100, unit: "ml", cost: 0.035 }, { name: "Stock cubes", qty: 3, unit: "ea", cost: 2.5 }, { name: "Salt", qty: 1, unit: "to taste", cost: 2 }, { name: "Boiled eggs (optional)", qty: 10, unit: "ea", cost: 3 }],
+    method: ["Blend beans, peppers and onion.", "Add oil and seasoning.", "Pour into foil trays or ramekins.", "Steam for 45-60 minutes."],
+  },
+  {
+    id: newId(),
+    name: "Coleslaw",
+    portions: 10,
+    sellPrice: 40,
+    targetFoodCost: null,
+    ingredients: [{ name: "Cabbage", qty: 1, unit: "ea", cost: 15 }, { name: "Carrots", qty: 4, unit: "ea", cost: 3.5 }, { name: "Onion", qty: 1, unit: "ea", cost: 3.5 }, { name: "Mayonnaise", qty: 500, unit: "ml", cost: 0.055 }, { name: "Salt and pepper", qty: 1, unit: "to taste", cost: 2 }],
+    method: ["Finely shred vegetables.", "Mix with mayonnaise.", "Chill before serving."],
+  },
+  {
+    id: newId(),
+    name: "Fried Plantain",
+    portions: 10,
+    sellPrice: 40,
+    targetFoodCost: null,
+    ingredients: [{ name: "Ripe plantains", qty: 10, unit: "ea", cost: 8 }, { name: "Vegetable oil", qty: 500, unit: "ml", cost: 0.035 }],
+    method: ["Slice diagonally.", "Fry until golden brown.", "Drain and serve."],
+  },
+  {
+    id: newId(),
+    name: "Egusi Soup",
+    portions: 10,
+    sellPrice: 140,
+    targetFoodCost: null,
+    ingredients: [{ name: "Ground egusi", qty: 500, unit: "g", cost: 0.22 }, { name: "Assorted meat", qty: 1, unit: "kg", cost: 95 }, { name: "Stockfish", qty: 200, unit: "g", cost: 0.55 }, { name: "Smoked fish", qty: 200, unit: "g", cost: 0.18 }, { name: "Spinach or pumpkin leaves", qty: 500, unit: "g", cost: 0.03 }, { name: "Palm oil", qty: 250, unit: "ml", cost: 0.055 }, { name: "Stock cubes", qty: 4, unit: "ea", cost: 2.5 }, { name: "Salt", qty: 1, unit: "to taste", cost: 2 }],
+    method: ["Cook meat and stockfish.", "Heat palm oil and fry egusi.", "Add stock and meat.", "Simmer for 20 minutes.", "Add fish and vegetables.", "Cook for 5 minutes."],
+  },
+  {
+    id: newId(),
+    name: "Ogbono Soup",
+    portions: 10,
+    sellPrice: 140,
+    targetFoodCost: null,
+    ingredients: [{ name: "Ground ogbono", qty: 400, unit: "g", cost: 0.28 }, { name: "Assorted meat", qty: 1, unit: "kg", cost: 95 }, { name: "Stockfish", qty: 200, unit: "g", cost: 0.55 }, { name: "Palm oil", qty: 250, unit: "ml", cost: 0.055 }, { name: "Spinach", qty: 500, unit: "g", cost: 0.03 }, { name: "Seasonings", qty: 1, unit: "to taste", cost: 5 }],
+    method: ["Cook meat until tender.", "Mix ogbono with palm oil.", "Add to boiling stock.", "Stir until thick.", "Add vegetables and cook briefly."],
+  },
+  {
+    id: newId(),
+    name: "Okro Soup",
+    portions: 10,
+    sellPrice: 90,
+    targetFoodCost: null,
+    ingredients: [{ name: "Fresh okra", qty: 1, unit: "kg", cost: 55 }, { name: "Assorted meat", qty: 1, unit: "kg", cost: 95 }, { name: "Smoked fish", qty: 200, unit: "g", cost: 0.18 }, { name: "Prawns", qty: 200, unit: "g", cost: 0.22 }, { name: "Palm oil", qty: 250, unit: "ml", cost: 0.055 }, { name: "Seasonings", qty: 1, unit: "to taste", cost: 5 }],
+    method: ["Cook meat.", "Add palm oil and seasonings.", "Add fish and prawns.", "Stir in chopped okra.", "Cook for 5 minutes."],
+  },
+  {
+    id: newId(),
+    name: "Seafood Okro Soup",
+    portions: 10,
+    sellPrice: 160,
+    targetFoodCost: null,
+    ingredients: [{ name: "Okra", qty: 1, unit: "kg", cost: 55 }, { name: "Prawns", qty: 500, unit: "g", cost: 0.22 }, { name: "Crab", qty: 500, unit: "g", cost: 0.18 }, { name: "Fish", qty: 500, unit: "g", cost: 0.09 }, { name: "Palm oil", qty: 250, unit: "ml", cost: 0.055 }, { name: "Stock cubes", qty: 4, unit: "ea", cost: 2.5 }, { name: "Salt", qty: 1, unit: "to taste", cost: 2 }],
+    method: ["Prepare seafood.", "Add seasonings and oil.", "Add okra last.", "Cook for 5 minutes."],
+  },
+  {
+    id: newId(),
+    name: "Banga Soup",
+    portions: 10,
+    sellPrice: 140,
+    targetFoodCost: null,
+    ingredients: [{ name: "Palm nuts (or 1L palm fruit concentrate)", qty: 2, unit: "kg", cost: 70 }, { name: "Assorted meat", qty: 1, unit: "kg", cost: 95 }, { name: "Dried fish", qty: 200, unit: "g", cost: 0.22 }, { name: "Banga spice mix", qty: 1, unit: "to taste", cost: 15 }, { name: "Salt", qty: 1, unit: "to taste", cost: 2 }],
+    method: ["Extract palm fruit juice.", "Cook meat separately.", "Combine with palm extract.", "Add spices and fish.", "Simmer until thick."],
+  },
+  {
+    id: newId(),
+    name: "Bitter Leaf Soup",
+    portions: 10,
+    sellPrice: 140,
+    targetFoodCost: null,
+    ingredients: [{ name: "Washed bitter leaf", qty: 500, unit: "g", cost: 0.12 }, { name: "Cocoyam paste", qty: 500, unit: "g", cost: 0.06 }, { name: "Assorted meat", qty: 1, unit: "kg", cost: 95 }, { name: "Stockfish", qty: 200, unit: "g", cost: 0.55 }, { name: "Palm oil", qty: 250, unit: "ml", cost: 0.055 }, { name: "Seasonings", qty: 1, unit: "to taste", cost: 5 }],
+    method: ["Cook meat and fish.", "Add cocoyam paste to thicken.", "Add palm oil.", "Add bitter leaf.", "Simmer for 10 minutes."],
+  },
+  {
+    id: newId(),
+    name: "Oha Soup",
+    portions: 10,
+    sellPrice: 140,
+    targetFoodCost: null,
+    ingredients: [{ name: "Oha leaves", qty: 500, unit: "g", cost: 0.15 }, { name: "Cocoyam paste", qty: 500, unit: "g", cost: 0.06 }, { name: "Assorted meat", qty: 1, unit: "kg", cost: 95 }, { name: "Stockfish", qty: 200, unit: "g", cost: 0.55 }, { name: "Palm oil", qty: 250, unit: "ml", cost: 0.055 }, { name: "Seasonings", qty: 1, unit: "to taste", cost: 5 }],
+    method: ["Cook meat and fish.", "Add cocoyam paste.", "Add palm oil.", "Add sliced Oha leaves last.", "Simmer for 5 minutes."],
+  },
+  {
+    id: newId(),
+    name: "Robata Wing",
+    portions: 10,
+    sellPrice: 55,
+    targetFoodCost: null,
+    ingredients: [{ name: "Chicken wings", qty: 2, unit: "kg", cost: 65 }, { name: "Soy sauce", qty: 150, unit: "ml", cost: 0.09 }, { name: "Mirin", qty: 100, unit: "ml", cost: 0.12 }, { name: "Sake", qty: 100, unit: "ml", cost: 0.15 }, { name: "Brown sugar", qty: 80, unit: "g", cost: 0.03 }, { name: "Garlic", qty: 4, unit: "ea", cost: 2 }, { name: "Ginger", qty: 30, unit: "g", cost: 0.15 }, { name: "Sesame oil", qty: 20, unit: "ml", cost: 0.25 }, { name: "Spring onions", qty: 3, unit: "ea", cost: 3 }, { name: "Sesame seeds", qty: 15, unit: "g", cost: 0.4 }, { name: "Salt", qty: 1, unit: "to taste", cost: 2 }],
+    method: ["Marinate wings in soy, mirin, sake, sugar, garlic and ginger for at least 2 hours.", "Skewer wings robata-style.", "Grill over hot coals, basting with marinade, until charred and cooked through.", "Reduce leftover marinade into a glaze.", "Brush wings with glaze, garnish with spring onions and sesame seeds."],
+  },
+  {
+    id: newId(),
+    name: "Crispy Squid",
+    portions: 4,
+    sellPrice: 95,
+    targetFoodCost: null,
+    ingredients: [{ name: "Squid tubes", qty: 400, unit: "g", cost: 0.16 }, { name: "Buttermilk", qty: 100, unit: "ml", cost: 0.04 }, { name: "Cake flour", qty: 100, unit: "g", cost: 0.01 }, { name: "Cornflour", qty: 50, unit: "g", cost: 0.05 }, { name: "Paprika", qty: 5, unit: "g", cost: 0.35 }, { name: "Salt", qty: 5, unit: "g", cost: 0.02 }, { name: "Sunflower oil (for frying)", qty: 500, unit: "ml", cost: 0.03 }, { name: "Lemon", qty: 1, unit: "ea", cost: 4 }],
+    method: ["Soak squid rings in buttermilk for 20 minutes.", "Combine flour, cornflour, paprika and salt for the dredge.", "Dredge squid rings, shaking off excess.", "Deep-fry at 180C for 2-3 minutes until golden and crisp.", "Drain, season and serve with a lemon wedge."],
+  },
+  {
+    id: newId(),
+    name: "Baked Feta",
+    portions: 4,
+    sellPrice: 85,
+    targetFoodCost: null,
+    ingredients: [{ name: "Feta block", qty: 200, unit: "g", cost: 0.13 }, { name: "Cherry tomatoes", qty: 150, unit: "g", cost: 0.025 }, { name: "Olive oil", qty: 30, unit: "ml", cost: 0.12 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }, { name: "Chilli flakes", qty: 2, unit: "g", cost: 0.3 }, { name: "Dried oregano", qty: 2, unit: "g", cost: 0.3 }, { name: "Ciabatta loaf", qty: 1, unit: "ea", cost: 18 }],
+    method: ["Place feta block in an oven dish.", "Scatter cherry tomatoes, garlic, chilli flakes and oregano around and over the feta.", "Drizzle with olive oil.", "Bake at 200C for 15-18 minutes until soft and tomatoes blister.", "Serve with toasted ciabatta."],
+  },
+  {
+    id: newId(),
+    name: "Salmon Carpaccio",
+    portions: 4,
+    sellPrice: 120,
+    targetFoodCost: null,
+    ingredients: [{ name: "Salmon fillet (sashimi grade)", qty: 200, unit: "g", cost: 0.35 }, { name: "Lemon", qty: 1, unit: "ea", cost: 4 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Capers", qty: 15, unit: "g", cost: 0.5 }, { name: "Red onion", qty: 20, unit: "g", cost: 0.02 }, { name: "Rocket", qty: 30, unit: "g", cost: 0.06 }, { name: "Parmesan shavings", qty: 15, unit: "g", cost: 0.18 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 1 }],
+    method: ["Slice salmon paper-thin and arrange on chilled plates.", "Scatter capers, red onion and rocket over the top.", "Shave parmesan over the salmon.", "Drizzle with olive oil and lemon juice.", "Season and serve immediately, chilled."],
+  },
+  {
+    id: newId(),
+    name: "Salt & Pepper Calamari",
+    portions: 4,
+    sellPrice: 100,
+    targetFoodCost: null,
+    ingredients: [{ name: "Calamari tubes & heads", qty: 400, unit: "g", cost: 0.16 }, { name: "Cornflour", qty: 80, unit: "g", cost: 0.05 }, { name: "Five spice", qty: 3, unit: "g", cost: 0.4 }, { name: "White pepper", qty: 3, unit: "g", cost: 0.6 }, { name: "Salt", qty: 5, unit: "g", cost: 0.02 }, { name: "Spring onion", qty: 2, unit: "ea", cost: 3 }, { name: "Red chilli", qty: 1, unit: "ea", cost: 3 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Oil (for frying)", qty: 500, unit: "ml", cost: 0.03 }],
+    method: ["Dredge calamari in cornflour, five spice, salt and pepper.", "Deep-fry until crisp and golden.", "Stir-fry garlic, chilli and spring onion in a hot wok briefly.", "Toss fried calamari through the aromatics.", "Serve immediately."],
+  },
+  {
+    id: newId(),
+    name: "Peri Peri Chicken Livers",
+    portions: 4,
+    sellPrice: 80,
+    targetFoodCost: null,
+    ingredients: [{ name: "Chicken livers", qty: 400, unit: "g", cost: 0.045 }, { name: "Peri peri sauce", qty: 60, unit: "ml", cost: 0.24 }, { name: "Butter", qty: 30, unit: "g", cost: 0.18 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Brandy", qty: 20, unit: "ml", cost: 0.2 }, { name: "Cream", qty: 30, unit: "ml", cost: 0.14 }],
+    method: ["Clean and trim the chicken livers.", "Saute onion and garlic in butter until soft.", "Add livers and sear 2-3 minutes per side.", "Deglaze with brandy, add peri peri sauce and cream.", "Simmer 3-4 minutes until sauce thickens. Serve hot with bread."],
+  },
+  {
+    id: newId(),
+    name: "Grilled Halloumi",
+    portions: 4,
+    sellPrice: 75,
+    targetFoodCost: null,
+    ingredients: [{ name: "Halloumi", qty: 250, unit: "g", cost: 0.14 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Honey", qty: 20, unit: "g", cost: 0.17 }, { name: "Lemon", qty: 0.5, unit: "ea", cost: 4 }, { name: "Fresh mint", qty: 5, unit: "g", cost: 0.5 }, { name: "Chilli flakes", qty: 2, unit: "g", cost: 0.3 }],
+    method: ["Slice halloumi into thick slabs.", "Grill or pan-fry until golden char lines form on both sides.", "Drizzle with honey and lemon juice.", "Garnish with mint and chilli flakes. Serve warm."],
+  },
+  {
+    id: newId(),
+    name: "Chicken Paillard",
+    portions: 4,
+    sellPrice: 135,
+    targetFoodCost: null,
+    ingredients: [{ name: "Chicken breast", qty: 800, unit: "g", cost: 0.09 }, { name: "Olive oil", qty: 30, unit: "ml", cost: 0.12 }, { name: "Lemon", qty: 1, unit: "ea", cost: 4 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }, { name: "Rocket", qty: 60, unit: "g", cost: 0.06 }, { name: "Parmesan", qty: 20, unit: "g", cost: 0.18 }, { name: "Cherry tomatoes", qty: 100, unit: "g", cost: 0.025 }],
+    method: ["Butterfly and flatten chicken breasts thin.", "Marinate in olive oil, garlic and lemon.", "Grill 2-3 minutes per side until cooked through.", "Top with rocket, shaved parmesan and cherry tomatoes.", "Finish with a lemon and oil drizzle."],
+  },
+  {
+    id: newId(),
+    name: "Grilled Calamari",
+    portions: 4,
+    sellPrice: 130,
+    targetFoodCost: null,
+    ingredients: [{ name: "Calamari tubes", qty: 500, unit: "g", cost: 0.16 }, { name: "Olive oil", qty: 30, unit: "ml", cost: 0.12 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Lemon", qty: 1, unit: "ea", cost: 4 }, { name: "Chilli flakes", qty: 2, unit: "g", cost: 0.3 }, { name: "Parsley", qty: 5, unit: "g", cost: 0.3 }],
+    method: ["Score calamari tubes in a criss-cross pattern.", "Marinate in olive oil, garlic and chilli.", "Grill on high heat 1-2 minutes per side.", "Toss with lemon and parsley, serve immediately."],
+  },
+  {
+    id: newId(),
+    name: "Salmon Steak",
+    portions: 4,
+    sellPrice: 175,
+    targetFoodCost: null,
+    ingredients: [{ name: "Salmon steaks", qty: 800, unit: "g", cost: 0.28 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Lemon", qty: 1, unit: "ea", cost: 4 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 2 }, { name: "Fresh dill", qty: 5, unit: "g", cost: 0.4 }],
+    method: ["Season salmon steaks with salt, pepper and oil.", "Sear skin-side down in a hot pan for 4 minutes.", "Flip and cook 3-4 minutes more to medium.", "Rest 2 minutes, finish with lemon and dill."],
+  },
+  {
+    id: newId(),
+    name: "Seared Tuna",
+    portions: 4,
+    sellPrice: 190,
+    targetFoodCost: null,
+    ingredients: [{ name: "Tuna loin (sashimi grade)", qty: 600, unit: "g", cost: 0.32 }, { name: "Sesame seeds", qty: 20, unit: "g", cost: 0.4 }, { name: "Soy sauce", qty: 30, unit: "ml", cost: 0.09 }, { name: "Sesame oil", qty: 10, unit: "ml", cost: 0.25 }, { name: "Wasabi", qty: 5, unit: "g", cost: 1 }, { name: "Pickled ginger", qty: 15, unit: "g", cost: 0.3 }],
+    method: ["Crust tuna loin in sesame seeds.", "Sear on all sides in a hot pan, 30-45 seconds per side for a rare centre.", "Rest, then slice thinly.", "Serve with soy sauce, wasabi and pickled ginger."],
+  },
+  {
+    id: newId(),
+    name: "King Klip",
+    portions: 4,
+    sellPrice: 150,
+    targetFoodCost: null,
+    ingredients: [{ name: "King klip fillets", qty: 720, unit: "g", cost: 0.18 }, { name: "Butter", qty: 30, unit: "g", cost: 0.18 }, { name: "Lemon", qty: 1, unit: "ea", cost: 4 }, { name: "Cake flour (for dusting)", qty: 40, unit: "g", cost: 0.01 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 2 }, { name: "Parsley", qty: 5, unit: "g", cost: 0.3 }],
+    method: ["Season and lightly flour the fillets.", "Pan-fry in butter 3-4 minutes per side until golden and flaky.", "Baste with butter as it cooks.", "Finish with lemon and parsley."],
+  },
+  {
+    id: newId(),
+    name: "Chargrilled Fillet",
+    portions: 4,
+    sellPrice: 220,
+    targetFoodCost: null,
+    ingredients: [{ name: "Beef fillet", qty: 880, unit: "g", cost: 0.32 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 3 }, { name: "Butter", qty: 20, unit: "g", cost: 0.18 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }, { name: "Thyme", qty: 3, unit: "g", cost: 0.3 }],
+    method: ["Bring fillet to room temperature and season generously.", "Chargrill to desired doneness, turning once.", "Baste with butter, garlic and thyme in the final minute.", "Rest 5 minutes before serving."],
+  },
+  {
+    id: newId(),
+    name: "T-Bone",
+    portions: 4,
+    sellPrice: 195,
+    targetFoodCost: null,
+    ingredients: [{ name: "T-bone steaks", qty: 1400, unit: "g", cost: 0.16 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 3 }, { name: "Garlic butter", qty: 40, unit: "g", cost: 0.2 }],
+    method: ["Season t-bones well and bring to room temperature.", "Chargrill both sides to preference, resting bone-side down.", "Rest 5 minutes, top with garlic butter."],
+  },
+  {
+    id: newId(),
+    name: "Lamb Chops",
+    portions: 4,
+    sellPrice: 210,
+    targetFoodCost: null,
+    ingredients: [{ name: "Lamb chops", qty: 800, unit: "g", cost: 0.22 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Rosemary", qty: 5, unit: "g", cost: 0.4 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 3 }],
+    method: ["Marinate chops in oil, garlic and rosemary.", "Chargrill 2-3 minutes per side for medium.", "Rest before serving."],
+  },
+  {
+    id: newId(),
+    name: "Rib Eye",
+    portions: 4,
+    sellPrice: 230,
+    targetFoodCost: null,
+    ingredients: [{ name: "Rib eye steaks", qty: 1200, unit: "g", cost: 0.22 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 3 }, { name: "Butter", qty: 20, unit: "g", cost: 0.18 }],
+    method: ["Season and bring to room temperature.", "Chargrill to preferred doneness.", "Baste with butter, rest 5 minutes before serving."],
+  },
+  {
+    id: newId(),
+    name: "Sirloin On The Bone",
+    portions: 4,
+    sellPrice: 200,
+    targetFoodCost: null,
+    ingredients: [{ name: "Sirloin on the bone", qty: 1400, unit: "g", cost: 0.18 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 3 }],
+    method: ["Season steaks and rest at room temperature.", "Chargrill on high heat, turning once.", "Rest before serving."],
+  },
+  {
+    id: newId(),
+    name: "Lobster Roll",
+    portions: 4,
+    sellPrice: 240,
+    targetFoodCost: null,
+    ingredients: [{ name: "Lobster tail meat", qty: 400, unit: "g", cost: 0.45 }, { name: "Brioche rolls", qty: 4, unit: "ea", cost: 12 }, { name: "Mayonnaise", qty: 60, unit: "g", cost: 0.064 }, { name: "Lemon", qty: 0.5, unit: "ea", cost: 4 }, { name: "Celery", qty: 30, unit: "g", cost: 0.04 }, { name: "Chives", qty: 5, unit: "g", cost: 0.5 }, { name: "Butter", qty: 20, unit: "g", cost: 0.18 }],
+    method: ["Poach or grill lobster meat, chill and chop.", "Toss with mayonnaise, lemon, celery and chives.", "Butter and toast brioche rolls.", "Fill rolls with lobster mixture."],
+  },
+  {
+    id: newId(),
+    name: "Beef Burger",
+    portions: 4,
+    sellPrice: 110,
+    targetFoodCost: null,
+    ingredients: [{ name: "Beef patty mix", qty: 600, unit: "g", cost: 0.11 }, { name: "Burger buns", qty: 4, unit: "ea", cost: 6 }, { name: "Cheddar cheese", qty: 80, unit: "g", cost: 0.13 }, { name: "Lettuce", qty: 40, unit: "g", cost: 0.03 }, { name: "Tomato", qty: 1, unit: "ea", cost: 4 }, { name: "Onion", qty: 0.5, unit: "ea", cost: 4 }, { name: "House burger sauce", qty: 40, unit: "g", cost: 0.1 }],
+    method: ["Form patties from the mince mix.", "Grill or pan-fry to preference.", "Melt cheese on top.", "Toast buns and assemble with lettuce, tomato, onion and sauce."],
+  },
+  {
+    id: newId(),
+    name: "Fillet Prego",
+    portions: 4,
+    sellPrice: 125,
+    targetFoodCost: null,
+    ingredients: [{ name: "Beef fillet strips", qty: 500, unit: "g", cost: 0.32 }, { name: "Portuguese roll", qty: 4, unit: "ea", cost: 10 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Peri peri sauce", qty: 40, unit: "ml", cost: 0.24 }, { name: "Butter", qty: 20, unit: "g", cost: 0.18 }, { name: "Lemon", qty: 0.5, unit: "ea", cost: 4 }],
+    method: ["Marinate fillet strips in garlic, peri peri and lemon.", "Sear quickly on high heat.", "Toast rolls with butter.", "Fill rolls with steak and pan juices."],
+  },
+  {
+    id: newId(),
+    name: "Oxtail",
+    portions: 4,
+    sellPrice: 190,
+    targetFoodCost: null,
+    ingredients: [{ name: "Oxtail", qty: 1200, unit: "g", cost: 0.15 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Carrot", qty: 100, unit: "g", cost: 0.035 }, { name: "Celery", qty: 50, unit: "g", cost: 0.04 }, { name: "Red wine", qty: 150, unit: "ml", cost: 0.1 }, { name: "Beef stock", qty: 500, unit: "ml", cost: 0.03 }, { name: "Tomato paste", qty: 40, unit: "g", cost: 0.075 }, { name: "Cake flour (dusting)", qty: 30, unit: "g", cost: 0.01 }],
+    method: ["Dust oxtail in flour and brown well.", "Saute onion, carrot and celery.", "Deglaze with red wine.", "Add stock and tomato paste, return oxtail to the pot.", "Braise low and slow for 3-4 hours until tender."],
+  },
+  {
+    id: newId(),
+    name: "Side Grill Corn",
+    portions: 4,
+    sellPrice: 40,
+    targetFoodCost: null,
+    ingredients: [{ name: "Corn on the cob", qty: 4, unit: "ea", cost: 6 }, { name: "Butter", qty: 30, unit: "g", cost: 0.18 }, { name: "Paprika", qty: 2, unit: "g", cost: 0.35 }, { name: "Salt", qty: 1, unit: "to taste", cost: 0.5 }, { name: "Lime", qty: 0.5, unit: "ea", cost: 4 }],
+    method: ["Grill corn on all sides until charred.", "Brush with butter.", "Dust with paprika and salt, squeeze over lime."],
+  },
+  {
+    id: newId(),
+    name: "Braised Baby Carrot",
+    portions: 4,
+    sellPrice: 38,
+    targetFoodCost: null,
+    ingredients: [{ name: "Baby carrots", qty: 400, unit: "g", cost: 0.035 }, { name: "Butter", qty: 20, unit: "g", cost: 0.18 }, { name: "Honey", qty: 20, unit: "g", cost: 0.17 }, { name: "Thyme", qty: 3, unit: "g", cost: 0.3 }, { name: "Chicken stock", qty: 100, unit: "ml", cost: 0.03 }],
+    method: ["Simmer carrots in stock, butter and honey until tender.", "Reduce the liquid to a glaze.", "Finish with thyme."],
+  },
+  {
+    id: newId(),
+    name: "Charred Broccoli",
+    portions: 4,
+    sellPrice: 38,
+    targetFoodCost: null,
+    ingredients: [{ name: "Broccoli", qty: 2, unit: "ea", cost: 30 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }, { name: "Chilli flakes", qty: 2, unit: "g", cost: 0.3 }, { name: "Lemon", qty: 0.5, unit: "ea", cost: 4 }],
+    method: ["Blanch broccoli briefly.", "Char on a hot grill or pan with oil.", "Toss with garlic, chilli flakes and lemon."],
+  },
+  {
+    id: newId(),
+    name: "Charred Cauliflower",
+    portions: 4,
+    sellPrice: 40,
+    targetFoodCost: null,
+    ingredients: [{ name: "Cauliflower", qty: 1, unit: "ea", cost: 35 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Tahini", qty: 30, unit: "g", cost: 0.15 }, { name: "Lemon", qty: 0.5, unit: "ea", cost: 4 }, { name: "Sumac or paprika", qty: 2, unit: "g", cost: 0.35 }],
+    method: ["Cut cauliflower into steaks or florets.", "Char on a grill or in a hot pan with oil.", "Drizzle with tahini and lemon, dust with sumac."],
+  },
+  {
+    id: newId(),
+    name: "Cream Spinach",
+    portions: 4,
+    sellPrice: 42,
+    targetFoodCost: null,
+    ingredients: [{ name: "Baby spinach", qty: 400, unit: "g", cost: 0.035 }, { name: "Cream", qty: 150, unit: "ml", cost: 0.14 }, { name: "Butter", qty: 20, unit: "g", cost: 0.18 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }, { name: "Nutmeg", qty: 1, unit: "to taste", cost: 0.5 }, { name: "Parmesan", qty: 20, unit: "g", cost: 0.18 }],
+    method: ["Wilt spinach and drain excess liquid.", "Saute garlic in butter.", "Add cream and reduce.", "Fold in spinach and parmesan, season with nutmeg."],
+  },
+  {
+    id: newId(),
+    name: "Parmesan Mash",
+    portions: 4,
+    sellPrice: 42,
+    targetFoodCost: null,
+    ingredients: [{ name: "Potatoes", qty: 800, unit: "g", cost: 0.02 }, { name: "Butter", qty: 60, unit: "g", cost: 0.18 }, { name: "Cream", qty: 100, unit: "ml", cost: 0.14 }, { name: "Parmesan", qty: 40, unit: "g", cost: 0.18 }, { name: "Salt", qty: 1, unit: "to taste", cost: 1 }],
+    method: ["Boil potatoes until tender, drain and dry.", "Mash with butter and warm cream.", "Fold in parmesan and season."],
+  },
+  {
+    id: newId(),
+    name: "Napolitano",
+    portions: 10,
+    sellPrice: 30,
+    targetFoodCost: null,
+    ingredients: [{ name: "Canned chopped tomatoes", qty: 800, unit: "g", cost: 0.045 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Garlic", qty: 4, unit: "ea", cost: 2 }, { name: "Olive oil", qty: 30, unit: "ml", cost: 0.12 }, { name: "Fresh basil", qty: 10, unit: "g", cost: 0.5 }, { name: "Sugar", qty: 5, unit: "g", cost: 0.03 }, { name: "Salt", qty: 1, unit: "to taste", cost: 0.5 }],
+    method: ["Saute onion and garlic in olive oil until soft.", "Add tomatoes and sugar, simmer 25-30 minutes.", "Season and finish with fresh basil.", "Blend if a smooth sauce is preferred."],
+  },
+  {
+    id: newId(),
+    name: "Prawn Bisque",
+    portions: 6,
+    sellPrice: 85,
+    targetFoodCost: null,
+    ingredients: [{ name: "Prawn shells & heads", qty: 500, unit: "g", cost: 0.1 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Carrot", qty: 50, unit: "g", cost: 0.035 }, { name: "Celery", qty: 50, unit: "g", cost: 0.04 }, { name: "Tomato paste", qty: 50, unit: "g", cost: 0.075 }, { name: "Brandy", qty: 30, unit: "ml", cost: 0.2 }, { name: "Cream", qty: 200, unit: "ml", cost: 0.14 }, { name: "Fish stock", qty: 500, unit: "ml", cost: 0.04 }],
+    method: ["Roast prawn shells until fragrant.", "Saute onion, carrot and celery.", "Deglaze with brandy.", "Add tomato paste and stock, simmer 30 minutes.", "Strain, add cream and blend until smooth."],
+  },
+  {
+    id: newId(),
+    name: "Lamb Shank",
+    portions: 4,
+    sellPrice: 220,
+    targetFoodCost: null,
+    ingredients: [{ name: "Lamb shanks", qty: 1600, unit: "g", cost: 0.2 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Carrot", qty: 100, unit: "g", cost: 0.035 }, { name: "Red wine", qty: 200, unit: "ml", cost: 0.1 }, { name: "Lamb or beef stock", qty: 500, unit: "ml", cost: 0.03 }, { name: "Tomato paste", qty: 40, unit: "g", cost: 0.075 }, { name: "Rosemary", qty: 5, unit: "g", cost: 0.4 }],
+    method: ["Brown shanks well on all sides.", "Saute vegetables, deglaze with wine.", "Add stock, tomato paste and rosemary.", "Braise covered for 2.5-3 hours until falling off the bone."],
+  },
+  {
+    id: newId(),
+    name: "Old School Dressing",
+    portions: 10,
+    sellPrice: 15,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mayonnaise", qty: 200, unit: "g", cost: 0.064 }, { name: "Buttermilk", qty: 150, unit: "ml", cost: 0.04 }, { name: "Dijon mustard", qty: 30, unit: "g", cost: 0.2 }, { name: "White wine vinegar", qty: 20, unit: "ml", cost: 0.1 }, { name: "Sugar", qty: 10, unit: "g", cost: 0.03 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 0.5 }],
+    method: ["Whisk mayonnaise, buttermilk and mustard together.", "Add vinegar and sugar, whisk smooth.", "Season and chill before use."],
+  },
+  {
+    id: newId(),
+    name: "Teriyaki Sauce",
+    portions: 10,
+    sellPrice: 12,
+    targetFoodCost: null,
+    ingredients: [{ name: "Soy sauce", qty: 200, unit: "ml", cost: 0.09 }, { name: "Mirin", qty: 100, unit: "ml", cost: 0.12 }, { name: "Sake", qty: 50, unit: "ml", cost: 0.15 }, { name: "Brown sugar", qty: 60, unit: "g", cost: 0.03 }, { name: "Ginger", qty: 20, unit: "g", cost: 0.15 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }, { name: "Cornflour", qty: 10, unit: "g", cost: 0.05 }],
+    method: ["Combine soy, mirin, sake, sugar, ginger and garlic in a pot.", "Simmer 5-8 minutes.", "Thicken with a cornflour slurry.", "Cool and strain."],
+  },
+  {
+    id: newId(),
+    name: "Churros",
+    portions: 6,
+    sellPrice: 55,
+    targetFoodCost: null,
+    ingredients: [{ name: "Cake flour", qty: 250, unit: "g", cost: 0.01 }, { name: "Butter", qty: 50, unit: "g", cost: 0.18 }, { name: "Water", qty: 250, unit: "ml", cost: 0.005 }, { name: "Eggs", qty: 2, unit: "ea", cost: 3 }, { name: "Sugar (for coating)", qty: 100, unit: "g", cost: 0.03 }, { name: "Cinnamon", qty: 5, unit: "g", cost: 0.35 }, { name: "Oil (for frying)", qty: 500, unit: "ml", cost: 0.03 }, { name: "Chocolate (for dipping)", qty: 100, unit: "g", cost: 0.45 }],
+    method: ["Boil water and butter, mix in flour to form a choux-style dough.", "Beat in eggs.", "Pipe into hot oil, fry until golden.", "Toss in cinnamon sugar.", "Serve with melted chocolate dip."],
+  },
+  {
+    id: newId(),
+    name: "Brandy Snap Mix",
+    portions: 10,
+    sellPrice: 25,
+    targetFoodCost: null,
+    ingredients: [{ name: "Butter", qty: 100, unit: "g", cost: 0.18 }, { name: "Golden syrup", qty: 100, unit: "g", cost: 0.2 }, { name: "Sugar", qty: 100, unit: "g", cost: 0.03 }, { name: "Cake flour", qty: 100, unit: "g", cost: 0.01 }, { name: "Ground ginger", qty: 5, unit: "g", cost: 0.35 }, { name: "Brandy", qty: 15, unit: "ml", cost: 0.2 }],
+    method: ["Melt butter, syrup and sugar together.", "Stir in flour and ginger off the heat.", "Add brandy.", "Spoon small amounts onto a tray, bake at 160C for 8 minutes.", "Cool briefly, then shape or leave flat as desired."],
+  },
+  {
+    id: newId(),
+    name: "Creme Brulee",
+    portions: 6,
+    sellPrice: 70,
+    targetFoodCost: null,
+    ingredients: [{ name: "Cream", qty: 500, unit: "ml", cost: 0.14 }, { name: "Egg yolks", qty: 6, unit: "ea", cost: 2 }, { name: "Sugar", qty: 80, unit: "g", cost: 0.03 }, { name: "Vanilla pod", qty: 1, unit: "ea", cost: 10 }, { name: "Sugar (for brulee top)", qty: 40, unit: "g", cost: 0.03 }],
+    method: ["Heat cream with vanilla until just simmering.", "Whisk egg yolks and sugar, temper with warm cream.", "Strain into ramekins, bake in a water bath at 150C for 35-40 minutes until set.", "Chill.", "Top with sugar and torch to caramelise before serving."],
+  },
+  {
+    id: newId(),
+    name: "Lemon Aioli",
+    portions: 8,
+    sellPrice: 15,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mayonnaise", qty: 300, unit: "g", cost: 0.064 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Lemon", qty: 1, unit: "ea", cost: 4 }, { name: "Olive oil", qty: 30, unit: "ml", cost: 0.12 }, { name: "Salt", qty: 1, unit: "to taste", cost: 0.5 }],
+    method: ["Crush garlic to a paste.", "Whisk into mayonnaise with lemon juice and zest.", "Slowly whisk in olive oil.", "Season and chill."],
+  },
+  {
+    id: newId(),
+    name: "Lobster Sauce",
+    portions: 8,
+    sellPrice: 45,
+    targetFoodCost: null,
+    ingredients: [{ name: "Lobster shells & trim", qty: 300, unit: "g", cost: 0.2 }, { name: "Butter", qty: 40, unit: "g", cost: 0.18 }, { name: "Onion", qty: 0.5, unit: "ea", cost: 4 }, { name: "Brandy", qty: 30, unit: "ml", cost: 0.2 }, { name: "Cream", qty: 250, unit: "ml", cost: 0.14 }, { name: "Tomato paste", qty: 20, unit: "g", cost: 0.075 }, { name: "Fish stock", qty: 200, unit: "ml", cost: 0.04 }],
+    method: ["Saute lobster shells and onion in butter until fragrant.", "Deglaze with brandy.", "Add tomato paste and stock, simmer 20 minutes.", "Strain, add cream and reduce to a coating consistency."],
+  },
+  {
+    id: newId(),
+    name: "Oreo Jar",
+    portions: 4,
+    sellPrice: 60,
+    targetFoodCost: null,
+    ingredients: [{ name: "Oreo biscuits", qty: 16, unit: "ea", cost: 2.5 }, { name: "Cream cheese", qty: 100, unit: "g", cost: 0.18 }, { name: "Cream", qty: 150, unit: "ml", cost: 0.14 }, { name: "Sugar", qty: 30, unit: "g", cost: 0.03 }, { name: "Chocolate sauce", qty: 40, unit: "g", cost: 0.45 }],
+    method: ["Crush half the Oreos for the base layer.", "Whip cream cheese, cream and sugar until thick.", "Layer crushed Oreos, cream mixture and chocolate sauce in jars.", "Top with a whole Oreo and chocolate drizzle.", "Chill before serving."],
+  },
+  {
+    id: newId(),
+    name: "S.U.V. Sauce",
+    portions: 10,
+    sellPrice: 18,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mayonnaise", qty: 150, unit: "g", cost: 0.064 }, { name: "Sour cream", qty: 100, unit: "ml", cost: 0.08 }, { name: "Worcestershire sauce", qty: 20, unit: "ml", cost: 0.14 }, { name: "Black pepper (cracked)", qty: 5, unit: "g", cost: 0.6 }, { name: "Brandy", qty: 20, unit: "ml", cost: 0.2 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }, { name: "Chives", qty: 5, unit: "g", cost: 0.5 }],
+    method: ["Combine mayonnaise and sour cream as the base.", "Stir in Worcestershire sauce, cracked pepper and brandy.", "Add garlic and chives.", "Chill to let the flavours develop."],
+  },
+  {
+    id: newId(),
+    name: "Tartar Sauce",
+    portions: 8,
+    sellPrice: 15,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mayonnaise", qty: 300, unit: "g", cost: 0.064 }, { name: "Gherkins", qty: 40, unit: "g", cost: 0.15 }, { name: "Capers", qty: 20, unit: "g", cost: 0.5 }, { name: "Lemon", qty: 0.5, unit: "ea", cost: 4 }, { name: "Parsley", qty: 5, unit: "g", cost: 0.3 }, { name: "Onion", qty: 20, unit: "g", cost: 0.02 }],
+    method: ["Finely chop gherkins, capers, parsley and onion.", "Fold into mayonnaise.", "Add lemon juice, season and chill."],
+  },
+  {
+    id: newId(),
+    name: "Seafood Chowder",
+    portions: 6,
+    sellPrice: 110,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mixed seafood (fish, prawns, mussels)", qty: 500, unit: "g", cost: 0.2 }, { name: "Potatoes", qty: 200, unit: "g", cost: 0.02 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Leek", qty: 1, unit: "ea", cost: 6 }, { name: "Cream", qty: 300, unit: "ml", cost: 0.14 }, { name: "Fish stock", qty: 500, unit: "ml", cost: 0.04 }, { name: "Butter", qty: 30, unit: "g", cost: 0.18 }, { name: "Bacon", qty: 80, unit: "g", cost: 0.15 }],
+    method: ["Render bacon, then saute onion and leek.", "Add potatoes and stock, simmer until tender.", "Add seafood and poach gently.", "Stir in cream, season and finish."],
+  },
+  {
+    id: newId(),
+    name: "Burger Patty Mix",
+    portions: 8,
+    sellPrice: 10,
+    targetFoodCost: null,
+    ingredients: [{ name: "Beef mince", qty: 1000, unit: "g", cost: 0.11 }, { name: "Onion", qty: 0.5, unit: "ea", cost: 4 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }, { name: "Egg", qty: 1, unit: "ea", cost: 3 }, { name: "Breadcrumbs", qty: 50, unit: "g", cost: 0.1 }, { name: "Worcestershire sauce", qty: 15, unit: "ml", cost: 0.14 }, { name: "Salt & pepper", qty: 1, unit: "to taste", cost: 1 }],
+    method: ["Combine mince with finely diced onion, garlic and egg.", "Mix in breadcrumbs and Worcestershire sauce.", "Season and form into patties.", "Chill before grilling."],
+  },
+  {
+    id: newId(),
+    name: "Chicken Basting Sauce",
+    portions: 10,
+    sellPrice: 10,
+    targetFoodCost: null,
+    ingredients: [{ name: "Butter", qty: 60, unit: "g", cost: 0.18 }, { name: "Lemon", qty: 1, unit: "ea", cost: 4 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Paprika", qty: 5, unit: "g", cost: 0.35 }, { name: "Honey", qty: 30, unit: "g", cost: 0.17 }, { name: "Chicken stock", qty: 100, unit: "ml", cost: 0.03 }],
+    method: ["Melt butter, add garlic and paprika.", "Stir in lemon, honey and stock.", "Simmer briefly to combine.", "Baste chicken while grilling."],
+  },
+  {
+    id: newId(),
+    name: "BBQ Basting",
+    portions: 10,
+    sellPrice: 10,
+    targetFoodCost: null,
+    ingredients: [{ name: "Tomato sauce (ketchup)", qty: 200, unit: "g", cost: 0.05 }, { name: "Brown sugar", qty: 50, unit: "g", cost: 0.03 }, { name: "Worcestershire sauce", qty: 30, unit: "ml", cost: 0.14 }, { name: "Apple cider vinegar", qty: 30, unit: "ml", cost: 0.08 }, { name: "Smoked paprika", qty: 5, unit: "g", cost: 0.35 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }],
+    method: ["Combine all ingredients in a pot.", "Simmer 10-15 minutes until thickened.", "Cool and use for basting on the grill."],
+  },
+  {
+    id: newId(),
+    name: "Salsa",
+    portions: 10,
+    sellPrice: 10,
+    targetFoodCost: null,
+    ingredients: [{ name: "Tomatoes", qty: 300, unit: "g", cost: 0.025 }, { name: "Red onion", qty: 0.5, unit: "ea", cost: 4 }, { name: "Coriander", qty: 10, unit: "g", cost: 0.5 }, { name: "Lime", qty: 1, unit: "ea", cost: 4 }, { name: "Green chilli", qty: 1, unit: "ea", cost: 3 }, { name: "Salt", qty: 1, unit: "to taste", cost: 0.5 }],
+    method: ["Dice tomatoes and onion finely.", "Chop coriander and chilli.", "Combine with lime juice and salt.", "Chill before serving."],
+  },
+  {
+    id: newId(),
+    name: "Mussel Stock",
+    portions: 10,
+    sellPrice: 8,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mussel shells & trim", qty: 500, unit: "g", cost: 0.09 }, { name: "Onion", qty: 0.5, unit: "ea", cost: 4 }, { name: "Celery", qty: 30, unit: "g", cost: 0.04 }, { name: "White wine", qty: 100, unit: "ml", cost: 0.08 }, { name: "Water", qty: 1000, unit: "ml", cost: 0.001 }, { name: "Bay leaves", qty: 1, unit: "to taste", cost: 1 }],
+    method: ["Saute onion and celery.", "Add mussel shells and wine, reduce.", "Add water, simmer 20-25 minutes.", "Strain and use as a seafood stock base."],
+  },
+  {
+    id: newId(),
+    name: "Mushroom Sauce",
+    portions: 8,
+    sellPrice: 20,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mushrooms", qty: 300, unit: "g", cost: 0.05 }, { name: "Butter", qty: 30, unit: "g", cost: 0.18 }, { name: "Onion", qty: 0.5, unit: "ea", cost: 4 }, { name: "Cream", qty: 250, unit: "ml", cost: 0.14 }, { name: "Beef stock", qty: 100, unit: "ml", cost: 0.03 }, { name: "Brandy", qty: 20, unit: "ml", cost: 0.2 }],
+    method: ["Saute mushrooms and onion in butter until golden.", "Deglaze with brandy.", "Add stock and cream, simmer until thickened."],
+  },
+  {
+    id: newId(),
+    name: "Pepper Sauce",
+    portions: 8,
+    sellPrice: 20,
+    targetFoodCost: null,
+    ingredients: [{ name: "Black peppercorns (crushed)", qty: 20, unit: "g", cost: 0.6 }, { name: "Butter", qty: 30, unit: "g", cost: 0.18 }, { name: "Onion", qty: 0.5, unit: "ea", cost: 4 }, { name: "Brandy", qty: 30, unit: "ml", cost: 0.2 }, { name: "Beef stock", qty: 150, unit: "ml", cost: 0.03 }, { name: "Cream", qty: 250, unit: "ml", cost: 0.14 }],
+    method: ["Saute onion in butter.", "Add crushed peppercorns and toast briefly.", "Deglaze with brandy.", "Add stock and cream, simmer until thickened."],
+  },
+  {
+    id: newId(),
+    name: "Tomato Pasta",
+    portions: 4,
+    sellPrice: 95,
+    targetFoodCost: null,
+    ingredients: [{ name: "Pasta (dried)", qty: 400, unit: "g", cost: 0.05 }, { name: "Napolitano sauce", qty: 400, unit: "ml", cost: 0.06 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Parmesan", qty: 30, unit: "g", cost: 0.18 }, { name: "Basil", qty: 5, unit: "g", cost: 0.5 }, { name: "Garlic", qty: 2, unit: "ea", cost: 2 }],
+    method: ["Cook pasta al dente.", "Warm napolitano sauce with garlic and oil.", "Toss pasta through the sauce.", "Finish with parmesan and basil."],
+  },
+  {
+    id: newId(),
+    name: "Chicken Curry",
+    portions: 4,
+    sellPrice: 120,
+    targetFoodCost: null,
+    ingredients: [{ name: "Chicken thighs (boneless)", qty: 600, unit: "g", cost: 0.08 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Ginger", qty: 20, unit: "g", cost: 0.15 }, { name: "Curry powder", qty: 20, unit: "g", cost: 0.4 }, { name: "Coconut milk", qty: 400, unit: "ml", cost: 0.0625 }, { name: "Canned tomato", qty: 200, unit: "g", cost: 0.045 }, { name: "Chicken stock", qty: 200, unit: "ml", cost: 0.03 }],
+    method: ["Saute onion, garlic and ginger until soft.", "Add curry powder and toast briefly.", "Add chicken and sear.", "Add tomato, coconut milk and stock.", "Simmer 25-30 minutes until chicken is tender and sauce thickened."],
+  },
+  {
+    id: newId(),
+    name: "Mussel Pot",
+    portions: 4,
+    sellPrice: 135,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mussels (fresh)", qty: 1200, unit: "g", cost: 0.09 }, { name: "White wine", qty: 150, unit: "ml", cost: 0.08 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Butter", qty: 30, unit: "g", cost: 0.18 }, { name: "Cream", qty: 100, unit: "ml", cost: 0.14 }, { name: "Parsley", qty: 5, unit: "g", cost: 0.3 }, { name: "Shallot", qty: 1, unit: "ea", cost: 4 }],
+    method: ["Saute shallot and garlic in butter.", "Add mussels and white wine, cover and steam 4-5 minutes until opened.", "Stir in cream and parsley.", "Discard any unopened mussels, serve with bread."],
+  },
+  {
+    id: newId(),
+    name: "Seafood Pasta",
+    portions: 4,
+    sellPrice: 160,
+    targetFoodCost: null,
+    ingredients: [{ name: "Pasta (dried)", qty: 400, unit: "g", cost: 0.05 }, { name: "Mixed seafood (prawns, calamari, mussels)", qty: 500, unit: "g", cost: 0.22 }, { name: "Napolitano/tomato base", qty: 300, unit: "ml", cost: 0.06 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "White wine", qty: 60, unit: "ml", cost: 0.08 }, { name: "Olive oil", qty: 20, unit: "ml", cost: 0.12 }, { name: "Parsley", qty: 5, unit: "g", cost: 0.3 }],
+    method: ["Cook pasta al dente.", "Saute garlic in olive oil, add seafood and sear.", "Deglaze with white wine, add tomato base.", "Simmer briefly, toss through the pasta.", "Finish with parsley."],
+  },
+  {
+    id: newId(),
+    name: "Seafood Pot",
+    portions: 4,
+    sellPrice: 170,
+    targetFoodCost: null,
+    ingredients: [{ name: "Mixed seafood (fish, prawns, mussels, calamari)", qty: 700, unit: "g", cost: 0.2 }, { name: "White wine", qty: 100, unit: "ml", cost: 0.08 }, { name: "Garlic", qty: 3, unit: "ea", cost: 2 }, { name: "Butter", qty: 30, unit: "g", cost: 0.18 }, { name: "Cream", qty: 100, unit: "ml", cost: 0.14 }, { name: "Tomato base", qty: 200, unit: "ml", cost: 0.06 }, { name: "Parsley", qty: 5, unit: "g", cost: 0.3 }],
+    method: ["Saute garlic in butter.", "Add seafood and sear briefly.", "Deglaze with wine, add tomato base.", "Simmer until seafood is cooked through.", "Stir in cream, finish with parsley."],
+  },
+  {
+    id: newId(),
+    name: "Aioli Sauce",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Mayonnaise", qty: 1000, unit: "g", cost: 0.055 }, { name: "Garlic", qty: 60, unit: "g", cost: 0.09 }, { name: "Lemon juice", qty: 80, unit: "ml", cost: 0.04 }, { name: "Dijon mustard", qty: 30, unit: "g", cost: 0.09 }, { name: "Olive oil", qty: 100, unit: "ml", cost: 0.08 }, { name: "Salt", qty: 8, unit: "g", cost: 0.02 }, { name: "Black pepper", qty: 4, unit: "g", cost: 0.06 }],
+    method: ["Mix mayonnaise, garlic, Dijon and lemon juice until smooth.", "Whisk in olive oil gradually.", "Season with salt and black pepper.", "Refrigerate and hold below 5\u00b0C."],
+  },
+  {
+    id: newId(),
+    name: "Asian Dressing",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Soy sauce", qty: 250, unit: "ml", cost: 0.055 }, { name: "Rice vinegar", qty: 150, unit: "ml", cost: 0.035 }, { name: "Sesame oil", qty: 80, unit: "ml", cost: 0.12 }, { name: "Honey", qty: 100, unit: "g", cost: 0.09 }, { name: "Fresh ginger", qty: 40, unit: "g", cost: 0.15 }, { name: "Garlic", qty: 30, unit: "g", cost: 0.09 }, { name: "Lime juice", qty: 80, unit: "ml", cost: 0.04 }, { name: "Chilli", qty: 20, unit: "g", cost: 0.08 }],
+    method: ["Combine soy sauce, rice vinegar, sesame oil and honey.", "Add ginger, garlic, chilli and lime juice.", "Whisk until emulsified.", "Refrigerate and shake before service."],
+  },
+  {
+    id: newId(),
+    name: "Bearnaise Sauce",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Butter", qty: 500, unit: "g", cost: 0.18 }, { name: "Egg yolks", qty: 6, unit: "ea", cost: 2.5 }, { name: "White wine vinegar", qty: 100, unit: "ml", cost: 0.03 }, { name: "White wine", qty: 100, unit: "ml", cost: 0.06 }, { name: "Shallots", qty: 80, unit: "g", cost: 0.05 }, { name: "Tarragon", qty: 15, unit: "g", cost: 0.5 }, { name: "Black pepper", qty: 3, unit: "g", cost: 0.06 }, { name: "Salt", qty: 5, unit: "g", cost: 0.02 }],
+    method: ["Reduce vinegar, wine, shallots, pepper and half the tarragon by two thirds.", "Strain and cool slightly.", "Whisk egg yolks over gentle heat with the reduction.", "Slowly emulsify in warm clarified butter.", "Season and finish with fresh tarragon. Hold warm, not hot."],
+  },
+  {
+    id: newId(),
+    name: "Beef Stock",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Beef bones", qty: 5, unit: "kg", cost: 35 }, { name: "Onions", qty: 800, unit: "g", cost: 0.035 }, { name: "Carrots", qty: 500, unit: "g", cost: 0.035 }, { name: "Celery", qty: 400, unit: "g", cost: 0.04 }, { name: "Tomato paste", qty: 150, unit: "g", cost: 0.03 }, { name: "Garlic", qty: 40, unit: "g", cost: 0.09 }, { name: "Bay leaves", qty: 5, unit: "ea", cost: 1.5 }, { name: "Black peppercorns", qty: 15, unit: "g", cost: 0.06 }, { name: "Water", qty: 10, unit: "L", cost: 0.002 }],
+    method: ["Roast bones at 220\u00b0C until deeply browned.", "Roast vegetables and tomato paste.", "Transfer to stockpot, cover with cold water and add aromatics.", "Simmer gently for 8\u201312 hours, skimming regularly.", "Strain, chill rapidly and refrigerate or freeze."],
+  },
+  {
+    id: newId(),
+    name: "Beer Batter",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Cake flour", qty: 500, unit: "g", cost: 0.01 }, { name: "Cornflour", qty: 150, unit: "g", cost: 0.05 }, { name: "Baking powder", qty: 15, unit: "g", cost: 0.05 }, { name: "Salt", qty: 10, unit: "g", cost: 0.02 }, { name: "Black pepper", qty: 3, unit: "g", cost: 0.06 }, { name: "Beer", qty: 750, unit: "ml", cost: 0.035 }, { name: "Egg", qty: 2, unit: "ea", cost: 3 }],
+    method: ["Sift flour, cornflour and baking powder.", "Whisk beer and eggs together.", "Fold wet ingredients into dry ingredients just before service.", "Keep batter cold and do not overmix."],
+  },
+  {
+    id: newId(),
+    name: "Blue Cheese Dressing",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Mayonnaise", qty: 500, unit: "g", cost: 0.055 }, { name: "Sour cream", qty: 400, unit: "g", cost: 0.07 }, { name: "Blue cheese", qty: 250, unit: "g", cost: 0.22 }, { name: "Lemon juice", qty: 40, unit: "ml", cost: 0.04 }, { name: "White vinegar", qty: 20, unit: "ml", cost: 0.025 }, { name: "Garlic", qty: 10, unit: "g", cost: 0.09 }, { name: "Black pepper", qty: 3, unit: "g", cost: 0.06 }, { name: "Salt", qty: 3, unit: "g", cost: 0.02 }],
+    method: ["Mash blue cheese with sour cream.", "Whisk in mayonnaise, lemon juice and vinegar.", "Add garlic and black pepper.", "Adjust seasoning and refrigerate."],
+  },
+  {
+    id: newId(),
+    name: "Bread & Butter Pudding",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "White bread", qty: 600, unit: "g", cost: 0.045 }, { name: "Butter", qty: 120, unit: "g", cost: 0.18 }, { name: "Milk", qty: 800, unit: "ml", cost: 0.025 }, { name: "Cream", qty: 400, unit: "ml", cost: 0.14 }, { name: "Eggs", qty: 6, unit: "ea", cost: 3 }, { name: "Sugar", qty: 180, unit: "g", cost: 0.03 }, { name: "Vanilla", qty: 10, unit: "ml", cost: 0.5 }, { name: "Raisins", qty: 150, unit: "g", cost: 0.07 }, { name: "Cinnamon", qty: 5, unit: "g", cost: 0.35 }],
+    method: ["Butter bread and arrange in a greased baking dish with raisins.", "Whisk milk, cream, eggs, sugar and vanilla.", "Pour custard over bread and rest for 15 minutes.", "Bake at 170\u00b0C until set and golden, about 35\u201345 minutes.", "Dust with cinnamon and serve warm."],
+  },
+  {
+    id: newId(),
+    name: "Brisket Marinade",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Soy sauce", qty: 250, unit: "ml", cost: 0.055 }, { name: "Worcestershire sauce", qty: 150, unit: "ml", cost: 0.07 }, { name: "Brown sugar", qty: 100, unit: "g", cost: 0.03 }, { name: "Apple cider vinegar", qty: 100, unit: "ml", cost: 0.08 }, { name: "Olive oil", qty: 150, unit: "ml", cost: 0.08 }, { name: "Garlic", qty: 50, unit: "g", cost: 0.09 }, { name: "Fresh ginger", qty: 30, unit: "g", cost: 0.15 }, { name: "Smoked paprika", qty: 30, unit: "g", cost: 0.12 }, { name: "Black pepper", qty: 10, unit: "g", cost: 0.06 }, { name: "Onions", qty: 200, unit: "g", cost: 0.035 }],
+    method: ["Blend all ingredients until evenly combined.", "Massage into brisket and refrigerate for 12\u201324 hours.", "Discard used marinade after raw-meat contact or boil it thoroughly before reuse."],
+  },
+  {
+    id: newId(),
+    name: "Caesar Dressing",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Mayonnaise", qty: 600, unit: "g", cost: 0.055 }, { name: "Parmesan", qty: 120, unit: "g", cost: 0.16 }, { name: "Anchovies", qty: 80, unit: "g", cost: 0.25 }, { name: "Lemon juice", qty: 80, unit: "ml", cost: 0.04 }, { name: "Dijon mustard", qty: 30, unit: "g", cost: 0.09 }, { name: "Garlic", qty: 25, unit: "g", cost: 0.09 }, { name: "Worcestershire sauce", qty: 30, unit: "ml", cost: 0.07 }, { name: "Olive oil", qty: 80, unit: "ml", cost: 0.08 }, { name: "Black pepper", qty: 4, unit: "g", cost: 0.06 }],
+    method: ["Blend mayonnaise, anchovy, garlic, Dijon, lemon and Worcestershire.", "Whisk in olive oil.", "Fold in Parmesan and season with black pepper.", "Refrigerate until service."],
+  },
+  {
+    id: newId(),
+    name: "Cheese Sauce",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Butter", qty: 100, unit: "g", cost: 0.18 }, { name: "Cake flour", qty: 100, unit: "g", cost: 0.01 }, { name: "Milk", qty: 1200, unit: "ml", cost: 0.025 }, { name: "Cheddar cheese", qty: 400, unit: "g", cost: 0.13 }, { name: "Parmesan", qty: 80, unit: "g", cost: 0.16 }, { name: "Dijon mustard", qty: 20, unit: "g", cost: 0.09 }, { name: "Salt", qty: 6, unit: "g", cost: 0.02 }, { name: "White pepper", qty: 2, unit: "g", cost: 0.06 }],
+    method: ["Make a blond roux with butter and flour.", "Gradually whisk in warm milk.", "Simmer until smooth and thickened.", "Add cheeses and Dijon off the heat.", "Season and hold warm."],
+  },
+  {
+    id: newId(),
+    name: "Chicken Brine",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Water", qty: 5, unit: "L", cost: 0.002 }, { name: "Salt", qty: 250, unit: "g", cost: 0.02 }, { name: "Brown sugar", qty: 150, unit: "g", cost: 0.03 }, { name: "Garlic", qty: 40, unit: "g", cost: 0.09 }, { name: "Fresh thyme", qty: 15, unit: "g", cost: 0.5 }, { name: "Black peppercorns", qty: 10, unit: "g", cost: 0.06 }, { name: "Bay leaves", qty: 4, unit: "ea", cost: 1.5 }],
+    method: ["Dissolve salt and sugar in 1 litre of hot water.", "Add remaining cold water and aromatics.", "Chill brine to below 5\u00b0C before use.", "Brine chicken under refrigeration for the required time, then drain and pat dry."],
+  },
+  {
+    id: newId(),
+    name: "Chicken Sugar Brine",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Water", qty: 5, unit: "L", cost: 0.002 }, { name: "Salt", qty: 180, unit: "g", cost: 0.02 }, { name: "Brown sugar", qty: 250, unit: "g", cost: 0.03 }, { name: "Honey", qty: 100, unit: "g", cost: 0.09 }, { name: "Garlic", qty: 40, unit: "g", cost: 0.09 }, { name: "Fresh thyme", qty: 15, unit: "g", cost: 0.5 }, { name: "Black peppercorns", qty: 10, unit: "g", cost: 0.06 }],
+    method: ["Dissolve salt and sugar in part of the water.", "Add honey and aromatics.", "Top up with cold water and chill completely.", "Submerge chicken under refrigeration, then drain and dry before cooking."],
+  },
+  {
+    id: newId(),
+    name: "Chermoula Marinade",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Fresh coriander", qty: 100, unit: "g", cost: 0.5 }, { name: "Fresh parsley", qty: 80, unit: "g", cost: 0.3 }, { name: "Garlic", qty: 40, unit: "g", cost: 0.09 }, { name: "Lemon juice", qty: 120, unit: "ml", cost: 0.04 }, { name: "Olive oil", qty: 300, unit: "ml", cost: 0.08 }, { name: "Ground cumin", qty: 20, unit: "g", cost: 0.12 }, { name: "Smoked paprika", qty: 20, unit: "g", cost: 0.12 }, { name: "Chilli", qty: 15, unit: "g", cost: 0.08 }, { name: "Salt", qty: 8, unit: "g", cost: 0.02 }],
+    method: ["Blend herbs, garlic, lemon juice and spices.", "Slowly add olive oil until a coarse marinade forms.", "Season and refrigerate.", "Use for fish, chicken or vegetables."],
+  },
+  {
+    id: newId(),
+    name: "Lamb Cutlets Glaze",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Honey", qty: 150, unit: "g", cost: 0.09 }, { name: "Dijon mustard", qty: 80, unit: "g", cost: 0.09 }, { name: "Soy sauce", qty: 100, unit: "ml", cost: 0.055 }, { name: "Balsamic vinegar", qty: 80, unit: "ml", cost: 0.08 }, { name: "Garlic", qty: 25, unit: "g", cost: 0.09 }, { name: "Fresh rosemary", qty: 20, unit: "g", cost: 0.4 }, { name: "Olive oil", qty: 80, unit: "ml", cost: 0.08 }, { name: "Black pepper", qty: 4, unit: "g", cost: 0.06 }],
+    method: ["Whisk all ingredients together.", "Brush lamb cutlets during the final stages of grilling.", "Reduce leftover unused glaze briefly if a thicker finish is required."],
+  },
+  {
+    id: newId(),
+    name: "Lamb Stock",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Lamb bones", qty: 5, unit: "kg", cost: 38 }, { name: "Onions", qty: 800, unit: "g", cost: 0.035 }, { name: "Carrots", qty: 500, unit: "g", cost: 0.035 }, { name: "Celery", qty: 400, unit: "g", cost: 0.04 }, { name: "Tomato paste", qty: 150, unit: "g", cost: 0.03 }, { name: "Garlic", qty: 40, unit: "g", cost: 0.09 }, { name: "Rosemary", qty: 20, unit: "g", cost: 0.4 }, { name: "Bay leaves", qty: 5, unit: "ea", cost: 1.5 }, { name: "Black peppercorns", qty: 15, unit: "g", cost: 0.06 }, { name: "Water", qty: 10, unit: "L", cost: 0.002 }],
+    method: ["Roast lamb bones at 220\u00b0C until well browned.", "Roast vegetables and tomato paste.", "Cover with cold water and add herbs and peppercorns.", "Simmer gently for 6\u201310 hours, skimming as required.", "Strain, chill rapidly and refrigerate or freeze."],
+  },
+  {
+    id: newId(),
+    name: "Lemon Butter Sauce",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Butter", qty: 400, unit: "g", cost: 0.18 }, { name: "Cream", qty: 500, unit: "ml", cost: 0.14 }, { name: "Lemon juice", qty: 100, unit: "ml", cost: 0.04 }, { name: "White wine", qty: 150, unit: "ml", cost: 0.06 }, { name: "Fish stock", qty: 200, unit: "ml", cost: 0.04 }, { name: "Garlic", qty: 20, unit: "g", cost: 0.09 }, { name: "Parsley", qty: 20, unit: "g", cost: 0.3 }, { name: "Salt", qty: 5, unit: "g", cost: 0.02 }, { name: "Black pepper", qty: 3, unit: "g", cost: 0.06 }],
+    method: ["Reduce white wine, fish stock and garlic by half.", "Add cream and reduce slightly.", "Whisk in cold butter gradually.", "Finish with lemon juice and parsley.", "Season and serve immediately."],
+  },
+  {
+    id: newId(),
+    name: "Miso Marinade",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "White miso", qty: 250, unit: "g", cost: 0.16 }, { name: "Soy sauce", qty: 150, unit: "ml", cost: 0.055 }, { name: "Mirin", qty: 150, unit: "ml", cost: 0.12 }, { name: "Sake", qty: 100, unit: "ml", cost: 0.15 }, { name: "Honey", qty: 100, unit: "g", cost: 0.09 }, { name: "Sesame oil", qty: 40, unit: "ml", cost: 0.12 }, { name: "Fresh ginger", qty: 30, unit: "g", cost: 0.15 }, { name: "Garlic", qty: 20, unit: "g", cost: 0.09 }],
+    method: ["Whisk miso, soy, mirin and sake until smooth.", "Add honey, sesame oil, ginger and garlic.", "Marinate fish, chicken, meat or vegetables under refrigeration.", "Brush off excess before grilling to prevent burning."],
+  },
+  {
+    id: newId(),
+    name: "Panko Chicken Mix",
+    portions: 20,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Panko breadcrumbs", qty: 500, unit: "g", cost: 0.08 }, { name: "Cake flour", qty: 250, unit: "g", cost: 0.012 }, { name: "Cornflour", qty: 100, unit: "g", cost: 0.05 }, { name: "Paprika", qty: 20, unit: "g", cost: 0.12 }, { name: "Garlic powder", qty: 15, unit: "g", cost: 0.1 }, { name: "Onion powder", qty: 15, unit: "g", cost: 0.1 }, { name: "Dried oregano", qty: 10, unit: "g", cost: 0.12 }, { name: "Salt", qty: 20, unit: "g", cost: 0.02 }, { name: "Black pepper", qty: 10, unit: "g", cost: 0.06 }],
+    method: ["Mix all dry ingredients thoroughly.", "Store airtight and keep dry.", "Use approximately 50 g mix per chicken portion."],
+  },
+  {
+    id: newId(),
+    name: "Peri Peri Sauce",
+    portions: 12,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Red chillies", qty: 150, unit: "g", cost: 0.25 }, { name: "Garlic", qty: 50, unit: "g", cost: 0.09 }, { name: "Lemon juice", qty: 100, unit: "ml", cost: 0.04 }, { name: "Red wine vinegar", qty: 80, unit: "ml", cost: 0.05 }, { name: "Olive oil", qty: 150, unit: "ml", cost: 0.08 }, { name: "Paprika", qty: 20, unit: "g", cost: 0.12 }, { name: "Smoked paprika", qty: 10, unit: "g", cost: 0.15 }, { name: "Salt", qty: 12, unit: "g", cost: 0.02 }, { name: "Black pepper", qty: 5, unit: "g", cost: 0.06 }, { name: "Sugar", qty: 20, unit: "g", cost: 0.03 }],
+    method: ["Blend all ingredients until smooth.", "Simmer gently for 5\u20138 minutes.", "Cool rapidly, refrigerate and use within the approved shelf life."],
+  },
+  {
+    id: newId(),
+    name: "Ponzu",
+    portions: 12,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Soy sauce", qty: 300, unit: "ml", cost: 0.09 }, { name: "Rice vinegar", qty: 150, unit: "ml", cost: 0.06 }, { name: "Lemon juice", qty: 100, unit: "ml", cost: 0.05 }, { name: "Orange juice", qty: 100, unit: "ml", cost: 0.04 }, { name: "Mirin", qty: 50, unit: "ml", cost: 0.12 }, { name: "Dashi stock", qty: 100, unit: "ml", cost: 0.04 }, { name: "Ginger", qty: 15, unit: "g", cost: 0.15 }, { name: "Spring onion", qty: 20, unit: "g", cost: 0.06 }],
+    method: ["Combine all ingredients.", "Rest refrigerated for 2\u20134 hours to develop flavour.", "Strain before service if a clear ponzu is required."],
+  },
+  {
+    id: newId(),
+    name: "Prawn Spice",
+    portions: 20,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Paprika", qty: 80, unit: "g", cost: 0.12 }, { name: "Cayenne pepper", qty: 20, unit: "g", cost: 0.15 }, { name: "Garlic powder", qty: 30, unit: "g", cost: 0.1 }, { name: "Onion powder", qty: 20, unit: "g", cost: 0.1 }, { name: "Black pepper", qty: 20, unit: "g", cost: 0.06 }, { name: "Dried oregano", qty: 15, unit: "g", cost: 0.12 }, { name: "Dried thyme", qty: 10, unit: "g", cost: 0.12 }, { name: "Salt", qty: 100, unit: "g", cost: 0.02 }],
+    method: ["Combine all spices and sieve if necessary.", "Store airtight in a cool, dry place.", "Use 10\u201315 g per 500 g prawns, adjusting to taste."],
+  },
+  {
+    id: newId(),
+    name: "Tempura Prawn Batter",
+    portions: 20,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Cake flour", qty: 300, unit: "g", cost: 0.012 }, { name: "Cornflour", qty: 100, unit: "g", cost: 0.05 }, { name: "Baking powder", qty: 10, unit: "g", cost: 0.05 }, { name: "Egg", qty: 2, unit: "ea", cost: 2.5 }, { name: "Soda water", qty: 400, unit: "ml", cost: 0.03 }, { name: "Salt", qty: 8, unit: "g", cost: 0.02 }],
+    method: ["Keep flour and soda water very cold.", "Whisk egg and soda water lightly.", "Fold in dry ingredients; do not overmix.", "Use immediately for best crispness."],
+  },
+  {
+    id: newId(),
+    name: "Prego Sauce",
+    portions: 12,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Onion", qty: 2, unit: "ea", cost: 4 }, { name: "Garlic", qty: 40, unit: "g", cost: 0.09 }, { name: "Red chilli", qty: 30, unit: "g", cost: 0.25 }, { name: "Smoked paprika", qty: 10, unit: "g", cost: 0.15 }, { name: "Tomato passata", qty: 500, unit: "ml", cost: 0.05 }, { name: "Red wine vinegar", qty: 50, unit: "ml", cost: 0.05 }, { name: "Lemon juice", qty: 40, unit: "ml", cost: 0.04 }, { name: "Olive oil", qty: 100, unit: "ml", cost: 0.08 }, { name: "Sugar", qty: 15, unit: "g", cost: 0.03 }, { name: "Parsley", qty: 20, unit: "g", cost: 0.3 }],
+    method: ["Sweat onion, garlic and chilli in olive oil.", "Add paprika and cook briefly.", "Add passata, vinegar, lemon and sugar.", "Simmer 15\u201320 minutes.", "Blend or leave rustic according to service style."],
+  },
+  {
+    id: newId(),
+    name: "Red Onion Pickling Solution",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Red onion", qty: 500, unit: "g", cost: 0.025 }, { name: "White vinegar", qty: 300, unit: "ml", cost: 0.025 }, { name: "Water", qty: 200, unit: "ml", cost: 0.005 }, { name: "Sugar", qty: 50, unit: "g", cost: 0.03 }, { name: "Salt", qty: 10, unit: "g", cost: 0.02 }, { name: "Black peppercorns", qty: 5, unit: "g", cost: 0.06 }],
+    method: ["Slice red onions thinly.", "Bring vinegar, water, sugar, salt and peppercorns to a simmer.", "Pour over onions and cool.", "Refrigerate once cooled and keep covered."],
+  },
+  {
+    id: newId(),
+    name: "Rice Vinegar",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Rice vinegar", qty: 500, unit: "ml", cost: 0.06 }, { name: "Sugar", qty: 50, unit: "g", cost: 0.03 }, { name: "Salt", qty: 10, unit: "g", cost: 0.02 }],
+    method: ["Combine rice vinegar, sugar and salt.", "Warm gently only until sugar and salt dissolve.", "Cool completely before use."],
+  },
+  {
+    id: newId(),
+    name: "Seafood Chowder Sauce",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Butter", qty: 80, unit: "g", cost: 0.18 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Leek", qty: 1, unit: "ea", cost: 6 }, { name: "Cake flour", qty: 70, unit: "g", cost: 0.012 }, { name: "Fish stock", qty: 800, unit: "ml", cost: 0.04 }, { name: "Cream", qty: 400, unit: "ml", cost: 0.14 }, { name: "White wine", qty: 150, unit: "ml", cost: 0.1 }, { name: "Thyme", qty: 5, unit: "g", cost: 0.3 }, { name: "Black pepper", qty: 3, unit: "g", cost: 0.06 }],
+    method: ["Sweat onion and leek in butter without colouring.", "Add flour and cook for 2 minutes.", "Whisk in wine and fish stock gradually.", "Simmer until thickened.", "Finish with cream, thyme and pepper."],
+  },
+  {
+    id: newId(),
+    name: "Seafood Curry",
+    portions: 8,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Mixed seafood", qty: 1000, unit: "g", cost: 0.2 }, { name: "Onion", qty: 2, unit: "ea", cost: 4 }, { name: "Garlic", qty: 30, unit: "g", cost: 0.09 }, { name: "Ginger", qty: 30, unit: "g", cost: 0.15 }, { name: "Curry powder", qty: 30, unit: "g", cost: 0.1 }, { name: "Turmeric", qty: 10, unit: "g", cost: 0.12 }, { name: "Tomato passata", qty: 400, unit: "ml", cost: 0.05 }, { name: "Coconut milk", qty: 400, unit: "ml", cost: 0.06 }, { name: "Fish stock", qty: 300, unit: "ml", cost: 0.04 }, { name: "Fresh coriander", qty: 20, unit: "g", cost: 0.3 }, { name: "Lime juice", qty: 30, unit: "ml", cost: 0.05 }],
+    method: ["Sweat onion, garlic and ginger.", "Add curry powder and turmeric; cook out spices.", "Add passata, coconut milk and stock; simmer 10 minutes.", "Add seafood and cook gently until just done.", "Finish with coriander and lime juice."],
+  },
+  {
+    id: newId(),
+    name: "Seafood Quiche",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Shortcrust pastry", qty: 500, unit: "g", cost: 0.08 }, { name: "Mixed seafood", qty: 500, unit: "g", cost: 0.2 }, { name: "Eggs", qty: 6, unit: "ea", cost: 2.5 }, { name: "Cream", qty: 300, unit: "ml", cost: 0.14 }, { name: "Cheddar cheese", qty: 150, unit: "g", cost: 0.12 }, { name: "Onion", qty: 1, unit: "ea", cost: 4 }, { name: "Parsley", qty: 15, unit: "g", cost: 0.3 }, { name: "Salt", qty: 5, unit: "g", cost: 0.02 }, { name: "Black pepper", qty: 3, unit: "g", cost: 0.06 }],
+    method: ["Line tart moulds with pastry and blind bake.", "Sweat onion and lightly cook seafood; cool.", "Whisk eggs and cream; season.", "Fill pastry with seafood, onion and cheese.", "Pour in custard and bake at 170\u00b0C until set and golden."],
+  },
+  {
+    id: newId(),
+    name: "Sesame Chicken Salad Dressing",
+    portions: 12,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Mayonnaise", qty: 300, unit: "g", cost: 0.055 }, { name: "Sesame oil", qty: 60, unit: "ml", cost: 0.1 }, { name: "Soy sauce", qty: 80, unit: "ml", cost: 0.09 }, { name: "Rice vinegar", qty: 80, unit: "ml", cost: 0.06 }, { name: "Honey", qty: 60, unit: "g", cost: 0.08 }, { name: "Ginger", qty: 20, unit: "g", cost: 0.15 }, { name: "Garlic", qty: 15, unit: "g", cost: 0.09 }, { name: "Sesame seeds", qty: 30, unit: "g", cost: 0.1 }],
+    method: ["Whisk mayonnaise, soy, vinegar and honey.", "Gradually whisk in sesame oil.", "Add ginger, garlic and sesame seeds.", "Adjust seasoning and refrigerate."],
+  },
+  {
+    id: newId(),
+    name: "Sweet Thai Chilli Sauce",
+    portions: 12,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Red chillies", qty: 120, unit: "g", cost: 0.25 }, { name: "Garlic", qty: 30, unit: "g", cost: 0.09 }, { name: "Rice vinegar", qty: 200, unit: "ml", cost: 0.06 }, { name: "Sugar", qty: 250, unit: "g", cost: 0.03 }, { name: "Water", qty: 200, unit: "ml", cost: 0.005 }, { name: "Cornflour", qty: 20, unit: "g", cost: 0.05 }, { name: "Salt", qty: 5, unit: "g", cost: 0.02 }],
+    method: ["Blend chillies and garlic with a little water.", "Combine with vinegar, sugar and remaining water.", "Simmer until sugar dissolves.", "Slurry cornflour with cold water and whisk in.", "Cook until glossy and lightly thickened."],
+  },
+  {
+    id: newId(),
+    name: "Teriyaki Alcohol Free Sauce",
+    portions: 10,
+    sellPrice: 0,
+    targetFoodCost: 0.3,
+    ingredients: [{ name: "Soy sauce", qty: 250, unit: "ml", cost: 0.09 }, { name: "Pineapple juice", qty: 150, unit: "ml", cost: 0.04 }, { name: "Brown sugar", qty: 80, unit: "g", cost: 0.03 }, { name: "Rice vinegar", qty: 40, unit: "ml", cost: 0.06 }, { name: "Ginger", qty: 20, unit: "g", cost: 0.15 }, { name: "Garlic", qty: 15, unit: "g", cost: 0.09 }, { name: "Cornflour", qty: 15, unit: "g", cost: 0.05 }, { name: "Water", qty: 50, unit: "ml", cost: 0.005 }],
+    method: ["Combine soy, pineapple juice, sugar, vinegar, ginger and garlic.", "Bring to a simmer and reduce slightly.", "Mix cornflour with water and whisk in.", "Cook until glossy and coating consistency.", "Cool and refrigerate."],
+  },
+];
+
+// If a recipe had no explicit selling price but did have a target food-cost %,
+// derive a starting suggested price from the recipe's own cost per portion.
+recipes.forEach(r => {
+  if (!r.sellPrice && r.targetFoodCost) {
+    const totalCost = r.ingredients.reduce((s, ing) => s + (ing.qty * ing.cost), 0);
+    const portions = Math.max(1, r.portions || 1);
+    const costPerPortion = totalCost / portions;
+    r.sellPrice = Math.round((costPerPortion / r.targetFoodCost) * 100) / 100;
+  }
+});
+
+
+/* ---------- Persistence (saved on this device) ---------- */
+const STORE_KEY = "recipe-costing-v1";
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+  if (saved && Array.isArray(saved.recipes) && saved.recipes.length) {
+    recipes.splice(0, recipes.length, ...saved.recipes);
+    uid = Math.max(saved.uid || 1, ...recipes.map(r => (r.id || 0) + 1));
+  }
+} catch (e) { console.warn("Could not load saved recipes", e); }
+
+function saveState(){
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ uid, recipes }));
+  } catch (e) { console.warn("Could not save recipes", e); }
+}
+
+const pizzas = [
+  { name: "Truffle & Wild Mushroom", sellPrice: 272.62, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.07, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.1, unit: "kg", cost: 145 }, { name: "Wild mushrooms", qty: 0.08, unit: "kg", cost: 110 }, { name: "Porcini mushrooms", qty: 0.025, unit: "kg", cost: 380 }, { name: "Parmesan", qty: 0.015, unit: "kg", cost: 260 }, { name: "Truffle cream", qty: 0.018, unit: "kg", cost: 420 }, { name: "Fresh black truffle", qty: 0.003, unit: "kg", cost: 8500 }, { name: "Thyme", qty: 0.002, unit: "kg", cost: 80 }, { name: "Olive oil", qty: 0.005, unit: "litre", cost: 85 }] },
+  { name: "Wagyu & Black Garlic", sellPrice: 359.4, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.06, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.08, unit: "kg", cost: 145 }, { name: "Wagyu beef", qty: 0.1, unit: "kg", cost: 650 }, { name: "Smoked mozzarella", qty: 0.04, unit: "kg", cost: 190 }, { name: "Caramelised onion", qty: 0.04, unit: "kg", cost: 55 }, { name: "Black garlic puree", qty: 0.012, unit: "kg", cost: 500 }, { name: "Rocket", qty: 0.015, unit: "kg", cost: 120 }, { name: "Parmesan", qty: 0.01, unit: "kg", cost: 260 }] },
+  { name: "Lobster & Bisque", sellPrice: 395.28, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Lobster bisque", qty: 0.05, unit: "kg", cost: 180 }, { name: "Fior di latte mozzarella", qty: 0.08, unit: "kg", cost: 145 }, { name: "Lobster meat", qty: 0.1, unit: "kg", cost: 850 }, { name: "Cherry tomatoes", qty: 0.04, unit: "kg", cost: 55 }, { name: "Chilli", qty: 0.004, unit: "kg", cost: 110 }, { name: "Lemon", qty: 0.02, unit: "kg", cost: 35 }, { name: "Chives", qty: 0.004, unit: "kg", cost: 180 }, { name: "Olive oil", qty: 0.005, unit: "litre", cost: 85 }] },
+  { name: "Prosciutto, Burrata & Fig", sellPrice: 305.23, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.06, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.07, unit: "kg", cost: 145 }, { name: "Prosciutto di Parma", qty: 0.06, unit: "kg", cost: 520 }, { name: "Fresh figs", qty: 0.06, unit: "kg", cost: 160 }, { name: "Burrata", qty: 0.07, unit: "kg", cost: 320 }, { name: "Balsamic reduction", qty: 0.012, unit: "kg", cost: 180 }, { name: "Rocket", qty: 0.012, unit: "kg", cost: 120 }, { name: "Pistachios", qty: 0.012, unit: "kg", cost: 300 }] },
+  { name: "Duck & Hoisin", sellPrice: 219.0, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.05, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.08, unit: "kg", cost: 145 }, { name: "Confit duck", qty: 0.1, unit: "kg", cost: 390 }, { name: "Hoisin sauce", qty: 0.018, unit: "kg", cost: 70 }, { name: "Spring onion", qty: 0.015, unit: "kg", cost: 70 }, { name: "Pickled cucumber", qty: 0.02, unit: "kg", cost: 75 }, { name: "Coriander", qty: 0.004, unit: "kg", cost: 90 }, { name: "Chilli", qty: 0.003, unit: "kg", cost: 110 }] },
+  { name: "Prawn & Saffron", sellPrice: 334.5, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Saffron cream", qty: 0.06, unit: "kg", cost: 600 }, { name: "Fior di latte mozzarella", qty: 0.08, unit: "kg", cost: 145 }, { name: "Tiger prawns", qty: 0.1, unit: "kg", cost: 420 }, { name: "Roasted garlic", qty: 0.015, unit: "kg", cost: 75 }, { name: "Chilli", qty: 0.003, unit: "kg", cost: 110 }, { name: "Lemon", qty: 0.015, unit: "kg", cost: 35 }, { name: "Parsley", qty: 0.003, unit: "kg", cost: 90 }] },
+  { name: "Pear & Gorgonzola", sellPrice: 148.9, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Fior di latte mozzarella", qty: 0.07, unit: "kg", cost: 145 }, { name: "Gorgonzola Dolce", qty: 0.05, unit: "kg", cost: 360 }, { name: "Pear", qty: 0.08, unit: "kg", cost: 45 }, { name: "Walnuts", qty: 0.015, unit: "kg", cost: 220 }, { name: "Honey", qty: 0.012, unit: "kg", cost: 80 }, { name: "Thyme", qty: 0.002, unit: "kg", cost: 80 }] },
+  { name: "Smoked Salmon & Caviar", sellPrice: 286.98, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Cr\u00e8me fra\u00eeche", qty: 0.06, unit: "kg", cost: 120 }, { name: "Fior di latte mozzarella", qty: 0.05, unit: "kg", cost: 145 }, { name: "Smoked salmon", qty: 0.07, unit: "kg", cost: 520 }, { name: "Capers", qty: 0.01, unit: "kg", cost: 180 }, { name: "Dill", qty: 0.003, unit: "kg", cost: 140 }, { name: "Lemon", qty: 0.015, unit: "kg", cost: 35 }, { name: "Caviar", qty: 0.008, unit: "kg", cost: 3000 }] },
+  { name: "Burrata & Parma Ham", sellPrice: 273.73, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.07, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.08, unit: "kg", cost: 145 }, { name: "Prosciutto di Parma", qty: 0.06, unit: "kg", cost: 520 }, { name: "Burrata", qty: 0.07, unit: "kg", cost: 320 }, { name: "Rocket", qty: 0.012, unit: "kg", cost: 120 }, { name: "Parmesan", qty: 0.01, unit: "kg", cost: 260 }, { name: "Basil oil", qty: 0.008, unit: "kg", cost: 180 }] },
+  { name: "Lamb & Feta", sellPrice: 211.75, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.06, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.07, unit: "kg", cost: 145 }, { name: "Lamb shoulder, cooked", qty: 0.1, unit: "kg", cost: 260 }, { name: "Whipped feta", qty: 0.05, unit: "kg", cost: 180 }, { name: "Roasted peppers", qty: 0.04, unit: "kg", cost: 90 }, { name: "Mint", qty: 0.003, unit: "kg", cost: 110 }, { name: "Pomegranate", qty: 0.025, unit: "kg", cost: 120 }, { name: "Olive oil", qty: 0.005, unit: "litre", cost: 85 }] },
+  { name: "Blue Cheese & Beef Fillet", sellPrice: 289.78, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.06, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.07, unit: "kg", cost: 145 }, { name: "Beef fillet", qty: 0.09, unit: "kg", cost: 520 }, { name: "Blue cheese", qty: 0.04, unit: "kg", cost: 300 }, { name: "Caramelised onion", qty: 0.035, unit: "kg", cost: 55 }, { name: "Rocket", qty: 0.012, unit: "kg", cost: 120 }, { name: "Red wine jus", qty: 0.02, unit: "kg", cost: 180 }] },
+  { name: "Crab & Chilli", sellPrice: 308.53, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Roasted garlic", qty: 0.015, unit: "kg", cost: 75 }, { name: "Fior di latte mozzarella", qty: 0.08, unit: "kg", cost: 145 }, { name: "Crab meat", qty: 0.09, unit: "kg", cost: 750 }, { name: "Chilli", qty: 0.004, unit: "kg", cost: 110 }, { name: "Lemon", qty: 0.015, unit: "kg", cost: 35 }, { name: "Parsley", qty: 0.003, unit: "kg", cost: 90 }, { name: "Parmesan", qty: 0.01, unit: "kg", cost: 260 }] },
+  { name: "Mortadella & Pistachio", sellPrice: 246.2, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Fior di latte mozzarella", qty: 0.09, unit: "kg", cost: 145 }, { name: "Mortadella", qty: 0.07, unit: "kg", cost: 300 }, { name: "Stracciatella", qty: 0.06, unit: "kg", cost: 360 }, { name: "Pistachio pesto", qty: 0.018, unit: "kg", cost: 320 }, { name: "Pistachios", qty: 0.012, unit: "kg", cost: 300 }, { name: "Lemon", qty: 0.01, unit: "kg", cost: 35 }] },
+  { name: "Fig, Goat Cheese & Honey", sellPrice: 146.83, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Fior di latte mozzarella", qty: 0.07, unit: "kg", cost: 145 }, { name: "Gorgonzola Dolce", qty: 0.025, unit: "kg", cost: 360 }, { name: "Fresh figs", qty: 0.07, unit: "kg", cost: 160 }, { name: "Walnuts", qty: 0.012, unit: "kg", cost: 220 }, { name: "Honey", qty: 0.012, unit: "kg", cost: 80 }, { name: "Thyme", qty: 0.002, unit: "kg", cost: 80 }, { name: "Balsamic reduction", qty: 0.008, unit: "kg", cost: 180 }] },
+  { name: "Charred Octopus", sellPrice: 298.88, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.06, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.07, unit: "kg", cost: 145 }, { name: "Charred octopus", qty: 0.09, unit: "kg", cost: 620 }, { name: "Nduja", qty: 0.025, unit: "kg", cost: 350 }, { name: "Roasted peppers", qty: 0.035, unit: "kg", cost: 90 }, { name: "Parsley", qty: 0.003, unit: "kg", cost: 90 }, { name: "Lemon", qty: 0.015, unit: "kg", cost: 35 }] },
+  { name: "Short Rib & Horseradish", sellPrice: 210.68, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.06, unit: "kg", cost: 42 }, { name: "Smoked mozzarella", qty: 0.07, unit: "kg", cost: 190 }, { name: "Short rib, cooked", qty: 0.1, unit: "kg", cost: 330 }, { name: "Caramelised onion", qty: 0.035, unit: "kg", cost: 55 }, { name: "Horseradish cream", qty: 0.018, unit: "kg", cost: 140 }, { name: "Rocket", qty: 0.012, unit: "kg", cost: 120 }] },
+  { name: "Chicken, Truffle & Brie", sellPrice: 199.9, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Truffle cream", qty: 0.018, unit: "kg", cost: 420 }, { name: "Fior di latte mozzarella", qty: 0.07, unit: "kg", cost: 145 }, { name: "Roast chicken", qty: 0.09, unit: "kg", cost: 150 }, { name: "Brie", qty: 0.05, unit: "kg", cost: 240 }, { name: "Wild mushrooms", qty: 0.05, unit: "kg", cost: 110 }, { name: "Thyme", qty: 0.002, unit: "kg", cost: 80 }, { name: "Parmesan", qty: 0.01, unit: "kg", cost: 260 }] },
+  { name: "Nduja & Burrata", sellPrice: 211.93, ingredients: [{ name: "Pizza dough ball (280g)", qty: 1, unit: "ea", cost: 8.5 }, { name: "Tomato passata", qty: 0.07, unit: "kg", cost: 42 }, { name: "Fior di latte mozzarella", qty: 0.08, unit: "kg", cost: 145 }, { name: "Nduja", qty: 0.035, unit: "kg", cost: 350 }, { name: "Roasted peppers", qty: 0.035, unit: "kg", cost: 90 }, { name: "Burrata", qty: 0.07, unit: "kg", cost: 320 }, { name: "Basil oil", qty: 0.008, unit: "kg", cost: 180 }, { name: "Chilli honey", qty: 0.01, unit: "kg", cost: 130 }] },
+];
+
+let activeId = recipes[0].id;
+const active = () => recipes.find(r => r.id === activeId);
+const fmt = n => "R " + (isFinite(n) ? n : 0).toFixed(2);
+
+let railFilter = "";
+
+function renderRail(){
+  const list = document.getElementById("recipeList");
+  list.innerHTML = "";
+  const q = railFilter.trim().toLowerCase();
+  const visible = q ? recipes.filter(r => (r.name || "").toLowerCase().includes(q)) : recipes;
+
+  visible.forEach(r => {
+    const tab = document.createElement("button");
+    tab.className = "recipe-tab" + (r.id === activeId ? " active" : "");
+    tab.innerHTML = `<span>${escapeHtml(r.name || "Untitled")}</span>`;
+    tab.addEventListener("click", () => { activeId = r.id; renderAll(); });
+    if (recipes.length > 1){
+      const rm = document.createElement("button");
+      rm.className = "rm";
+      rm.textContent = "\u2715";
+      rm.title = "Delete recipe";
+      rm.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = recipes.findIndex(x => x.id === r.id);
+        recipes.splice(idx, 1);
+        if (activeId === r.id) activeId = recipes[0] ? recipes[0].id : null;
+        renderAll();
+      });
+      tab.appendChild(rm);
+    }
+    list.appendChild(tab);
+  });
+
+  const countEl = document.getElementById("recipeCount");
+  if (countEl) countEl.textContent = `${visible.length} of ${recipes.length} recipes`;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+function renderMain(){
+  const r = active();
+  if (!r){
+    document.querySelector("main").style.display = "none";
+    return;
+  }
+  document.querySelector("main").style.display = "";
+  document.getElementById("recipeName").value = r.name;
+  document.getElementById("portions").value = r.portions;
+  document.getElementById("sellPrice").value = r.sellPrice;
+
+  const body = document.getElementById("ingredientBody");
+  body.innerHTML = "";
+  r.ingredients.forEach((ing, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" data-field="name" value="${escapeHtml(ing.name)}"></td>
+      <td class="num"><input type="number" step="any" data-field="qty" value="${ing.qty}"></td>
+      <td class="unit"><input type="text" data-field="unit" value="${escapeHtml(ing.unit)}"></td>
+      <td class="num"><input type="number" step="any" data-field="cost" value="${ing.cost}"></td>
+      <td class="num line-cost">${fmt(ing.qty * ing.cost)}</td>
+      <td><button class="row-remove" title="Remove ingredient">&#10005;</button></td>
+    `;
+    tr.querySelectorAll("input").forEach(inp => {
+      inp.addEventListener("input", () => {
+        const field = inp.dataset.field;
+        ing[field] = (field === "qty" || field === "cost") ? parseFloat(inp.value) || 0 : inp.value;
+        renderMain();
+        renderRail();
+      });
+    });
+    tr.querySelector(".row-remove").addEventListener("click", () => {
+      r.ingredients.splice(i, 1);
+      renderMain();
+    });
+    body.appendChild(tr);
+  });
+
+  const totalCost = r.ingredients.reduce((s, ing) => s + (ing.qty * ing.cost), 0);
+  document.getElementById("totalCost").textContent = fmt(totalCost);
+
+  const methodList = document.getElementById("methodList");
+  methodList.innerHTML = "";
+  r.method.forEach((step, i) => {
+    const li = document.createElement("li");
+    const ta = document.createElement("textarea");
+    ta.value = step;
+    ta.rows = 1;
+    ta.addEventListener("input", () => {
+      r.method[i] = ta.value;
+      autoGrow(ta);
+    });
+    const rm = document.createElement("button");
+    rm.className = "method-remove";
+    rm.innerHTML = "&#10005;";
+    rm.title = "Remove step";
+    rm.addEventListener("click", () => { r.method.splice(i, 1); renderMain(); });
+    li.appendChild(ta);
+    li.appendChild(rm);
+    methodList.appendChild(li);
+    requestAnimationFrame(() => autoGrow(ta));
+  });
+
+  const portions = Math.max(1, r.portions || 1);
+  const costPerPortion = totalCost / portions;
+  document.getElementById("costPerPortion").textContent = fmt(costPerPortion);
+
+  const sell = r.sellPrice || 0;
+  const gp = sell > 0 ? ((sell - costPerPortion) / sell) * 100 : 0;
+  const markup = costPerPortion > 0 ? ((sell - costPerPortion) / costPerPortion) * 100 : 0;
+  document.getElementById("gpPercent").textContent = gp.toFixed(1) + "%";
+  document.getElementById("markupPercent").textContent = markup.toFixed(1) + "%";
+
+  const costShare = sell > 0 ? Math.min(100, (costPerPortion / sell) * 100) : 100;
+  document.getElementById("barCost").style.width = costShare + "%";
+  document.getElementById("barProfit").style.width = (100 - costShare) + "%";
+}
+
+function autoGrow(ta){
+  ta.style.height = "auto";
+  ta.style.height = ta.scrollHeight + "px";
+}
+
+function renderAll(){ renderRail(); renderMain(); }
+
+document.getElementById("recipeName").addEventListener("input", (e) => {
+  active().name = e.target.value;
+  renderRail();
+});
+document.getElementById("portions").addEventListener("input", (e) => {
+  active().portions = parseFloat(e.target.value) || 1;
+  renderMain();
+});
+document.getElementById("sellPrice").addEventListener("input", (e) => {
+  active().sellPrice = parseFloat(e.target.value) || 0;
+  renderMain();
+});
+document.getElementById("addIngredient").addEventListener("click", () => {
+  active().ingredients.push({ name: "New ingredient", qty: 0, unit: "ea", cost: 0 });
+  renderMain();
+});
+document.getElementById("addStep").addEventListener("click", () => {
+  active().method.push("");
+  renderMain();
+});
+document.getElementById("railSearch").addEventListener("input", (e) => {
+  railFilter = e.target.value;
+  renderRail();
+});
+document.getElementById("addRecipe").addEventListener("click", () => {
+  const r = { id: newId(), name: "New recipe", portions: 4, sellPrice: 0, ingredients: [], method: [] };
+  recipes.push(r);
+  activeId = r.id;
+  renderAll();
+});
+
+renderAll();
+
+/* ---------- Pizza cards view ---------- */
+function fmtR(n){ return "R " + (isFinite(n) ? n : 0).toFixed(2); }
+
+function renderPizzaGrid(){
+  const grid = document.getElementById("pizzaGrid");
+  grid.innerHTML = "";
+  pizzas.forEach(p => {
+    const cost = p.ingredients.reduce((s, ing) => s + (ing.qty * ing.cost), 0);
+    const gp = p.sellPrice > 0 ? ((p.sellPrice - cost) / p.sellPrice) * 100 : 0;
+    const card = document.createElement("div");
+    card.className = "pizza-card";
+    const ingHtml = p.ingredients.map(ing =>
+      `<li><span>${escapeHtml(ing.name)}</span><span>${ing.qty}${escapeHtml(ing.unit)}</span></li>`
+    ).join("");
+    card.innerHTML = `
+      <h3>${escapeHtml(p.name)}</h3>
+      <div class="pizza-price-row">
+        <span class="pizza-price">${fmtR(p.sellPrice)}</span>
+        <span class="pizza-meta">GP ${gp.toFixed(0)}%</span>
+      </div>
+      <ul class="pizza-ingredients">${ingHtml}</ul>
+      <div class="pizza-cost-line">
+        <span>Ingredient cost</span>
+        <span>${fmtR(cost)}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+renderPizzaGrid();
+
+const viewRecipesBtn = document.getElementById("viewRecipesBtn");
+const viewPizzaBtn = document.getElementById("viewPizzaBtn");
+const recipeView = document.getElementById("recipeView");
+const pizzaView = document.getElementById("pizzaView");
+
+function setView(view){
+  const isRecipes = view === "recipes";
+  recipeView.style.display = isRecipes ? "" : "none";
+  pizzaView.style.display = isRecipes ? "none" : "";
+  viewRecipesBtn.classList.toggle("active", isRecipes);
+  viewPizzaBtn.classList.toggle("active", !isRecipes);
+  document.getElementById("railSearch").style.display = isRecipes ? "" : "none";
+  document.getElementById("recipeCount").style.display = isRecipes ? "" : "none";
+  document.getElementById("recipeList").style.display = isRecipes ? "" : "none";
+  document.getElementById("addRecipe").style.display = isRecipes ? "" : "none";
+}
+viewRecipesBtn.addEventListener("click", () => setView("recipes"));
+viewPizzaBtn.addEventListener("click", () => setView("pizza"));
+
+/* Save after any edit, click or change, and when the app is backgrounded */
+let saveTimer = null;
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 300); }
+["input", "change", "click"].forEach(ev => document.addEventListener(ev, scheduleSave, true));
+document.addEventListener("visibilitychange", () => { if (document.hidden) saveState(); });
+window.addEventListener("pagehide", saveState);
+</script>
+</body>
+</html>
